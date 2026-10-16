@@ -61,6 +61,10 @@
             <input id="signup-username" type="text" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="Choose a username"/>
           </div>
           <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Age</label>
+            <input id="signup-age" type="number" required min="1" max="120" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="e.g. 25"/>
+          </div>
+          <div>
             <label class="block text-xs font-medium text-slate-400 mb-1">Email</label>
             <input id="signup-email" type="email" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="you@example.com"/>
           </div>
@@ -110,6 +114,32 @@
             </form>
           </div>
         </div>
+
+        <!-- Admin Chat -->
+        <div class="lg:col-span-full mt-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[500px]">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2 text-pink-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Chat with Girlfriends
+            </h3>
+            <span id="admin-chat-status" class="text-xs text-slate-500">Loading...</span>
+          </div>
+          <div class="mb-3">
+            <label class="block text-xs font-medium text-slate-400 mb-1">Select conversation</label>
+            <select id="admin-chat-user-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition">
+              <option value="">Select a girlfriend</option>
+            </select>
+          </div>
+          <div id="admin-chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scroll-smooth">
+            <div class="text-center py-4 text-slate-500 text-xs">Select a conversation to start chatting.</div>
+          </div>
+          <div class="flex gap-2 border-t border-slate-800 pt-4">
+            <textarea id="admin-chat-input" rows="1" placeholder="Type a reply..."
+              class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-none" data-rows="1"></textarea>
+            <button id="btn-admin-send-chat" disabled class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-pink-900/30 flex items-center justify-center text-opacity-50">
+              Send
+            </button>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -131,9 +161,14 @@
 
   <script type="module">
     import { auth } from "./firebase-config.js";
+    import { db } from "./firebase-config.js";
     import { ADMIN_EMAIL, register, login, logout, initAuth, currentUser } from "./auth.js";
     import { initAdmin, renderAdminPanel, destroyAdmin } from "./admin.js";
     import { initUser, renderUserDashboard, destroyUser } from "./user.js";
+    import {
+      collection, query, where, orderBy, onSnapshot, doc, addDoc,
+      serverTimestamp, getDocs
+    } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
     const ui = {
       getElement(id) { return document.getElementById(id); },
@@ -157,25 +192,6 @@
       } else {
         ui.hideSection("auth-view");
         ui.getElement("nav-user").classList.remove("hidden");
-      }
-    }
-
-    function handleAuthChange(user) {
-      if (!user) {
-        setAuthView(true);
-        destroyAdmin();
-        destroyUser();
-        return;
-      }
-      const role = user.email === ADMIN_EMAIL ? "admin" : "girlfriend";
-      ui.getElement("nav-role").textContent = role;
-      setAuthView(false);
-      if (role === "admin") {
-        destroyUser();
-        renderAdminPanel(ui);
-      } else {
-        destroyAdmin();
-        renderUserDashboard(ui);
       }
     }
 
@@ -224,14 +240,165 @@
     formSignup.onsubmit = async (e) => {
       e.preventDefault();
       const username = ui.getElement("signup-username").value.trim();
+      const age = ui.getElement("signup-age").value.trim();
       const email = ui.getElement("signup-email").value.trim();
       const password = ui.getElement("signup-password").value;
       try {
-        await register(email, password, username);
+        await register(email, password, username, age);
       } catch (err) {
         ui.showMessage("msg-signup", err.message);
       }
     };
+
+    /* ---------- Admin Chat ---------- */
+    const adminChatUserSelect = document.getElementById("admin-chat-user-select");
+    const adminChatMessages = document.getElementById("admin-chat-messages");
+    const adminChatInput = document.getElementById("admin-chat-input");
+    const btnAdminSendChat = document.getElementById("btn-admin-send-chat");
+    const adminChatStatus = document.getElementById("admin-chat-status");
+
+    let selectedGirlfriendUid = null;
+    let adminChatUnsubscribe = null;
+
+    adminChatInput.addEventListener("input", () => {
+      adminChatInput.style.height = "auto";
+      adminChatInput.style.height = adminChatInput.scrollHeight + "px";
+    });
+
+    // Load girlfriends into dropdown
+    async function loadGirlfriends() {
+      try {
+        const q = query(collection(db, "users"), where("role", "==", "girlfriend"));
+        const snap = await getDocs(q);
+        adminChatUserSelect.innerHTML = '<option value="">Select a girlfriend</option>';
+        snap.forEach((d) => {
+          const data = d.data();
+          const opt = document.createElement("option");
+          opt.value = d.id;
+          opt.textContent = `${data.username || data.email} (${data.email})`;
+          adminChatUserSelect.appendChild(opt);
+        });
+        adminChatStatus.textContent = `${snap.size} girlfriend${snap.size !== 1 ? "s" : ""} available`;
+        adminChatStatus.className = "text-xs text-green-400";
+      } catch (err) {
+        adminChatStatus.textContent = "Failed to load users";
+        adminChatStatus.className = "text-xs text-red-400";
+        console.error(err);
+      }
+    }
+
+    function renderAdminChat(msgs) {
+      adminChatMessages.innerHTML = "";
+      if (msgs.length === 0) {
+        adminChatMessages.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">No messages yet. Start the conversation!</div>';
+        return;
+      }
+      msgs.forEach((m) => {
+        const isMe = m.senderId === auth.currentUser.uid;
+        const div = document.createElement("div");
+        div.className = `max-w-[80%] ${isMe ? "ml-auto text-right" : "mr-auto text-left"}`;
+        div.innerHTML = `
+          <div class="inline-block px-4 py-2.5 rounded-2xl ${isMe ? "bg-pink-600 text-white" : "bg-slate-800 text-slate-200 border border-slate-700"} shadow-sm">
+            <p class="text-sm whitespace-pre-wrap">${escapeHtmlAdmin(m.text)}</p>
+            <div class="text-[10px] ${isMe ? "text-pink-200" : "text-slate-500"} mt-1">
+              ${isMe ? "You (Admin)" : (m.senderName || "Girlfriend")} • ${formatTimeAdmin(m.timestamp)}
+            </div>
+          </div>
+        `;
+        adminChatMessages.appendChild(div);
+      });
+      adminChatMessages.scrollTop = adminChatMessages.scrollHeight;
+    }
+
+    function startAdminChat(uid) {
+      if (adminChatUnsubscribe) adminChatUnsubscribe();
+      selectedGirlfriendUid = uid;
+      btnAdminSendChat.disabled = false;
+      btnAdminSendChat.className = "bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-pink-900/30 flex items-center justify-center text-opacity-100";
+      adminChatMessages.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">Loading messages...</div>';
+
+      adminChatUnsubscribe = onSnapshot(collection(db, "messages"), (snap) => {
+        const msgs = [];
+        snap.forEach((d) => {
+          const data = d.data();
+          if ((data.senderId === auth.currentUser.uid && data.receiverId === uid) ||
+              (data.senderId === uid && data.receiverId === auth.currentUser.uid)) {
+            msgs.push({ id: d.id, ...data });
+          }
+        });
+        msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+        renderAdminChat(msgs);
+      });
+    }
+
+    adminChatUserSelect.onchange = (e) => {
+      const val = e.target.value;
+      if (val) startAdminChat(val);
+    };
+
+    async function sendAdminChat() {
+      const text = adminChatInput.value.trim();
+      if (!text || !selectedGirlfriendUid) return;
+      try {
+        const me = auth.currentUser;
+        await addDoc(collection(db, "messages"), {
+          senderId: me.uid,
+          receiverId: selectedGirlfriendUid,
+          text,
+          senderName: "Admin",
+          timestamp: serverTimestamp()
+        });
+        adminChatInput.value = "";
+        adminChatInput.style.height = "auto";
+      } catch (err) {
+        alert("Failed to send: " + err.message);
+      }
+    }
+
+    btnAdminSendChat.onclick = sendAdminChat;
+    adminChatInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendAdminChat();
+      }
+    });
+
+    function escapeHtmlAdmin(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function formatTimeAdmin(ts) {
+      if (!ts) return "";
+      const d = ts.toDate ? ts.toDate() : new Date(ts);
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    }
+
+    function handleAuthChange(user) {
+      if (!user) {
+        setAuthView(true);
+        destroyAdmin();
+        destroyUser();
+        if (adminChatUnsubscribe) adminChatUnsubscribe();
+        return;
+      }
+      const role = user.email === ADMIN_EMAIL ? "admin" : "girlfriend";
+      ui.getElement("nav-role").textContent = role;
+      if (role === "admin") {
+        setAuthView(false);
+        destroyUser();
+        renderAdminPanel(ui);
+        loadGirlfriends();
+      } else {
+        setAuthView(false);
+        destroyAdmin();
+        destroyUser();
+        window.location.replace("user-dashboard.html");
+      }
+    }
+
+    initAuth(handleAuthChange);
   </script>
 </body>
 </html>

@@ -15,7 +15,7 @@ export function getRole(email) {
   return email === ADMIN_EMAIL ? "admin" : "girlfriend";
 }
 
-export function register(email, password, username) {
+export function register(email, password, username, age) {
   return createUserWithEmailAndPassword(auth, email, password)
     .then((userCredential) => {
       const user = userCredential.user;
@@ -24,6 +24,7 @@ export function register(email, password, username) {
         uid: user.uid,
         username: username || email.split("@")[0],
         email: user.email,
+        age: age || null,
         role: role,
         createdAt: new Date().toISOString()
       }).then(() => ({ user, role }));

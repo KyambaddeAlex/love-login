@@ -6,7 +6,7 @@ service cloud.firestore {
       return request.auth != null && request.auth.token.email == "kyambaddealex55@gmail.com";
     }
 
-    // Users collection: read allowed for admin or the document owner.
+    // Users collection
     match /users/{userId} {
       allow read: if request.auth != null && (
         isAdmin() || request.auth.uid == userId
@@ -21,7 +21,6 @@ service cloud.firestore {
     }
 
     // Tasks collection: write/delete strictly admin.
-    // Read/update allowed if assigned to the requester or if admin.
     match /tasks/{taskId} {
       allow read: if request.auth != null && (
         isAdmin() || request.auth.uid == resource.data.assignedTo
@@ -31,6 +30,37 @@ service cloud.firestore {
         isAdmin() || request.auth.uid == resource.data.assignedTo
       );
       allow delete: if request.auth != null && isAdmin();
+    }
+
+    // Messages collection: both parties can read/write.
+    match /messages/{messageId} {
+      allow read: if request.auth != null && (
+        isAdmin() ||
+        request.auth.uid == resource.data.senderId ||
+        request.auth.uid == resource.data.receiverId
+      );
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        request.auth.uid == request.data.senderId ||
+        request.auth.uid == request.data.receiverId
+      );
+      allow update: if request.auth != null && (
+        isAdmin() ||
+        request.auth.uid == resource.data.senderId
+      );
+      allow delete: if request.auth != null && isAdmin();
+    }
+
+    // Stories collection: read for all authenticated; write for author/admin.
+    match /stories/{storyId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        isAdmin() || request.auth.uid == resource.data.authorId
+      );
+      allow delete: if request.auth != null && (
+        isAdmin() || request.auth.uid == resource.data.authorId
+      );
     }
   }
 }
