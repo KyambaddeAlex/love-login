@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.email == "kyambaddealex55@gmail.com";
+    }
+
+    // Users collection: read allowed for admin or the document owner.
+    match /users/{userId} {
+      allow read: if request.auth != null && (
+        isAdmin() || request.auth.uid == userId
+      );
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (
+        isAdmin() || request.auth.uid == userId
+      );
+      allow delete: if request.auth != null && (
+        isAdmin() || request.auth.uid == userId
+      );
+    }
+
+    // Tasks collection: write/delete strictly admin.
+    // Read/update allowed if assigned to the requester or if admin.
+    match /tasks/{taskId} {
+      allow read: if request.auth != null && (
+        isAdmin() || request.auth.uid == resource.data.assignedTo
+      );
+      allow create: if request.auth != null && isAdmin();
+      allow update: if request.auth != null && (
+        isAdmin() || request.auth.uid == resource.data.assignedTo
+      );
+      allow delete: if request.auth != null && isAdmin();
+    }
+  }
+}

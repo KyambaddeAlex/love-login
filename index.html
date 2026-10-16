@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Love Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-pink-500 selection:text-white">
+
+  <nav class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded bg-pink-600 flex items-center justify-center text-white font-bold text-lg">L</div>
+        <span class="font-bold text-xl tracking-tight text-white">LOVE<span class="text-pink-500">LOGIN</span></span>
+      </div>
+      <div id="nav-user" class="hidden items-center gap-4">
+        <span id="nav-role" class="text-xs text-slate-400 uppercase tracking-wider"></span>
+        <button id="nav-logout" class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium transition">Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-4 py-8">
+    <!-- Auth View -->
+    <section id="auth-view" class="max-w-md mx-auto">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+        <div class="text-center mb-8">
+          <h2 class="text-2xl font-bold text-white">Welcome back</h2>
+          <p class="text-slate-400 text-sm mt-2">Sign in to your account</p>
+        </div>
+
+        <div id="auth-toggle" class="flex mb-6">
+          <button id="tab-login" class="flex-1 py-3 rounded-t-xl border-b-2 border-pink-500 text-pink-400 font-semibold bg-slate-800/50">Login</button>
+          <button id="tab-signup" class="flex-1 py-3 rounded-t-xl border-transparent text-slate-500 hover:text-slate-300">Sign up</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="form-login" class="space-y-4">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Email</label>
+            <input id="login-email" type="email" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="you@example.com"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Password</label>
+            <input id="login-password" type="password" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="••••••••"/>
+          </div>
+          <button type="submit" id="btn-login" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Sign in</button>
+          <p class="text-center text-xs text-slate-500">Don't have an account? <button type="button" id="show-signup" class="text-pink-400 hover:underline font-medium">Sign up</button></p>
+          <p id="msg-login" class="text-xs text-red-400 h-4 hidden"></p>
+        </form>
+
+        <!-- Signup Form -->
+        <form id="form-signup" class="space-y-4 hidden">
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Username</label>
+            <input id="signup-username" type="text" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="Choose a username"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Email</label>
+            <input id="signup-email" type="email" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="you@example.com"/>
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Password</label>
+            <input id="signup-password" type="password" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="••••••••"/>
+          </div>
+          <button type="submit" id="btn-signup" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Create account</button>
+          <p class="text-center text-xs text-slate-500">Already have an account? <button type="button" id="show-login" class="text-pink-400 hover:underline font-medium">Sign in</button></p>
+          <p id="msg-signup" class="text-xs text-red-400 h-4 hidden"></p>
+        </form>
+
+        <p class="text-center text-xs text-slate-600 mt-6">Admin: kyambaddealex55@gmail.com</p>
+      </div>
+    </section>
+
+    <!-- Admin Panel -->
+    <section id="admin-panel" class="hidden">
+      <div class="flex flex-col lg:flex-row gap-6">
+        <div class="lg:w-1/3 space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-pink-500"></span> Registered Accounts
+            </h3>
+            <div id="admin-users-list" class="space-y-2">
+              <p class="text-slate-400 text-sm">Loading registered accounts...</p>
+            </div>
+          </div>
+        </div>
+        <div class="lg:w-2/3 space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span class="w-2 h-2 rounded-full bg-pink-500"></span> Assign a Task
+            </h3>
+            <form id="task-form" class="space-y-4">
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Assign to user</label>
+                <select id="assign-user-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition">
+                  <option value="">Select a user</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-medium text-slate-400 mb-1">Task title</label>
+                <input id="task-title" type="text" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="e.g. Buy flowers"/>
+              </div>
+              <button type="submit" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Create Task</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- User Dashboard -->
+    <section id="user-dashboard" class="hidden">
+      <div class="mb-8">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 id="user-welcome" class="text-2xl font-bold text-white">Welcome</h2>
+            <p class="text-slate-400 text-sm">Here are your assigned tasks.</p>
+          </div>
+        </div>
+      </div>
+      <div id="user-tasks-list" class="space-y-3">
+        <p class="text-slate-400 text-sm">Loading your tasks...</p>
+      </div>
+    </section>
+  </main>
+
+  <script type="module">
+    import { auth } from "./firebase-config.js";
+    import { ADMIN_EMAIL, register, login, logout, initAuth, currentUser } from "./auth.js";
+    import { initAdmin, renderAdminPanel, destroyAdmin } from "./admin.js";
+    import { initUser, renderUserDashboard, destroyUser } from "./user.js";
+
+    const ui = {
+      getElement(id) { return document.getElementById(id); },
+      showSection(id) { this.getElement(id).classList.remove("hidden"); },
+      hideSection(id) { this.getElement(id).classList.add("hidden"); },
+      showMessage(id, text, type = "error") {
+        const el = this.getElement(id);
+        el.textContent = text;
+        el.className = `text-xs ${type === "error" ? "text-red-400" : "text-green-400"} h-4`;
+        el.classList.remove("hidden");
+        setTimeout(() => el.classList.add("hidden"), 4000);
+      }
+    };
+
+    function setAuthView(show) {
+      if (show) {
+        ui.showSection("auth-view");
+        ui.hideSection("admin-panel");
+        ui.hideSection("user-dashboard");
+        ui.getElement("nav-user").classList.add("hidden");
+      } else {
+        ui.hideSection("auth-view");
+        ui.getElement("nav-user").classList.remove("hidden");
+      }
+    }
+
+    function handleAuthChange(user) {
+      if (!user) {
+        setAuthView(true);
+        destroyAdmin();
+        destroyUser();
+        return;
+      }
+      const role = user.email === ADMIN_EMAIL ? "admin" : "girlfriend";
+      ui.getElement("nav-role").textContent = role;
+      setAuthView(false);
+      if (role === "admin") {
+        destroyUser();
+        renderAdminPanel(ui);
+      } else {
+        destroyAdmin();
+        renderUserDashboard(ui);
+      }
+    }
+
+    initAuth(handleAuthChange);
+
+    // Logout
+    ui.getElement("nav-logout").onclick = () => logout().catch(console.error);
+
+    // Auth tabs
+    const tabLogin = ui.getElement("tab-login");
+    const tabSignup = ui.getElement("tab-signup");
+    const formLogin = ui.getElement("form-login");
+    const formSignup = ui.getElement("form-signup");
+
+    function showLogin() {
+      formLogin.classList.remove("hidden");
+      formSignup.classList.add("hidden");
+      tabLogin.className = "flex-1 py-3 rounded-t-xl border-b-2 border-pink-500 text-pink-400 font-semibold bg-slate-800/50";
+      tabSignup.className = "flex-1 py-3 rounded-t-xl border-transparent text-slate-500 hover:text-slate-300";
+    }
+    function showSignup() {
+      formSignup.classList.remove("hidden");
+      formLogin.classList.add("hidden");
+      tabSignup.className = "flex-1 py-3 rounded-t-xl border-b-2 border-pink-500 text-pink-400 font-semibold bg-slate-800/50";
+      tabLogin.className = "flex-1 py-3 rounded-t-xl border-transparent text-slate-500 hover:text-slate-300";
+    }
+
+    ui.getElement("show-signup").onclick = showSignup;
+    ui.getElement("show-login").onclick = showLogin;
+    tabSignup.onclick = showSignup;
+    tabLogin.onclick = showLogin;
+
+    // Login submit
+    formLogin.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = ui.getElement("login-email").value.trim();
+      const password = ui.getElement("login-password").value;
+      try {
+        await login(email, password);
+      } catch (err) {
+        ui.showMessage("msg-login", err.message);
+      }
+    };
+
+    // Signup submit
+    formSignup.onsubmit = async (e) => {
+      e.preventDefault();
+      const username = ui.getElement("signup-username").value.trim();
+      const email = ui.getElement("signup-email").value.trim();
+      const password = ui.getElement("signup-password").value;
+      try {
+        await register(email, password, username);
+      } catch (err) {
+        ui.showMessage("msg-signup", err.message);
+      }
+    };
+  </script>
+</body>
+</html>
