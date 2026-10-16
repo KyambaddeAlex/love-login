@@ -61,8 +61,8 @@
             <input id="signup-username" type="text" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="Choose a username"/>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Age</label>
-            <input id="signup-age" type="number" required min="1" max="120" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="e.g. 25"/>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Age (optional)</label>
+            <input id="signup-age" type="number" min="1" max="120" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="e.g. 25"/>
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-400 mb-1">Email</label>
@@ -244,9 +244,23 @@
       const email = ui.getElement("signup-email").value.trim();
       const password = ui.getElement("signup-password").value;
       try {
-        await register(email, password, username, age);
+        await register(email, password, username, age || null);
       } catch (err) {
         ui.showMessage("msg-signup", err.message);
+        console.error("Signup error:", err);
+      }
+    };
+
+    // Login submit
+    formLogin.onsubmit = async (e) => {
+      e.preventDefault();
+      const email = ui.getElement("login-email").value.trim();
+      const password = ui.getElement("login-password").value;
+      try {
+        await login(email, password);
+      } catch (err) {
+        ui.showMessage("msg-login", err.message);
+        console.error("Login error:", err);
       }
     };
 
