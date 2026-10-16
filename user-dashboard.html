@@ -85,8 +85,8 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4">
-              <div class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Email</div>
-              <div class="text-sm text-slate-200 truncate" id="display-email">—</div>
+              <div class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Account name</div>
+              <div class="text-sm text-slate-200 truncate" id="display-account-name">—</div>
             </div>
             <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4">
               <div class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Member Since</div>
@@ -196,10 +196,10 @@
     import { auth, db } from "./firebase-config.js";
     import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
     import {
-      collection, query, where, onSnapshot, doc, updateDoc,
-      serverTimestamp, addDoc, getDocs
+      collection, query, where, or, onSnapshot, doc, updateDoc,
+      serverTimestamp, addDoc, runTransaction
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-    const ADMIN_EMAIL = "kyambaddealex55@gmail.com";
+    import { ADMIN_UID, getRole } from "./auth.js";
 
     // DOM refs
     const navRole = document.getElementById("nav-role");
@@ -208,7 +208,7 @@
     const profileMeta = document.getElementById("user-profile-meta");
     const displayUsername = document.getElementById("display-username");
     const displayAge = document.getElementById("display-age");
-    const displayEmail = document.getElementById("display-email");
+    const displayAccountName = document.getElementById("display-account-name");
     const displayRole = document.getElementById("display-role");
     const displayJoined = document.getElementById("display-joined");
     const taskCountBadge = document.getElementById("task-count-badge");
@@ -230,7 +230,7 @@
     const emptyTasks = document.getElementById("empty-tasks");
 
     let currentUserData = null;
-    let adminUid = null;
+    const adminUid = ADMIN_UID;
     let tasksUnsubscribe = null;
     let chatUnsubscribe = null;
     let storiesUnsubscribe = null;
@@ -247,7 +247,7 @@
         window.location.replace("index.html");
         return;
       }
-      if (user.email === ADMIN_EMAIL) {
+      if (user.uid === ADMIN_UID) {
         window.location.replace("index.html");
         return;
       }
@@ -260,26 +260,15 @@
         const { doc: docRef, getDoc } = await import("https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js");
         const snap = await getDoc(docRef(db, "users", user.uid));
         if (snap.exists()) {
-          currentUserData = snap.data();
+          currentUserData = { ...snap.data(), role: getRole(user.uid) };
         } else {
-          currentUserData = { username: user.email.split("@")[0], email: user.email, role: "girlfriend", age: null };
+          currentUserData = { username: user.email.split("@")[0], email: user.email, role: getRole(user.uid), age: null };
         }
       } catch (e) {
-        currentUserData = { username: user.email.split("@")[0], email: user.email, role: "girlfriend", age: null };
+        currentUserData = { username: user.email.split("@")[0], email: user.email, role: getRole(user.uid), age: null };
       }
 
       renderProfile(currentUserData);
-
-      // Find admin uid
-      try {
-        const adminSnap = await getDocs(collection(db, "users"));
-        adminSnap.forEach((d) => {
-          const data = d.data();
-          if (data.email === ADMIN_EMAIL) {
-            adminUid = d.id;
-          }
-        });
-      } catch (e) { console.error(e); }
 
       loadTasks(user.uid);
       loadChat(user.uid, adminUid);
@@ -306,10 +295,10 @@
       });
 
       welcomeEl.textContent = `Welcome, ${data.username || "Love"}`;
-      profileMeta.textContent = `${data.role} • ${data.email}`;
+      profileMeta.textContent = `${data.role} account`;
       displayUsername.textContent = data.username || "—";
       displayAge.textContent = data.age ? `${data.age} years old` : "—";
-      displayEmail.textContent = data.email || "—";
+      displayAccountName.textContent = data.username || "—";
       displayRole.textContent = (data.role || "girlfriend").charAt(0).toUpperCase() + (data.role || "girlfriend").slice(1);
       displayJoined.textContent = data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "—";
 
@@ -377,13 +366,42 @@
           });
 
           tasksContainer.querySelectorAll('button[data-id]').forEach((btn) => {
-            btn.onclick = () => {
+            btn.onclick = async () => {
               const id = btn.dataset.id;
-              const currentlyDone = btn.dataset.done === "true";
-              updateDoc(doc(db, "tasks", id), {
-                status: currentlyDone ? "pending" : "done",
-                updatedAt: serverTimestamp()
-              }).catch((err) => alert("Failed: " + err.message));
+              const taskRef = doc(db, "tasks", id);
+              const notificationRef = doc(collection(db, "notifications"));
+              btn.disabled = true;
+              try {
+                await runTransaction(db, async (transaction) => {
+                  const taskSnap = await transaction.get(taskRef);
+                  if (!taskSnap.exists()) throw new Error("This task no longer exists.");
+
+                  const task = taskSnap.data();
+                  if (task.assignedTo !== uid) throw new Error("You can only update your own tasks.");
+
+                  const completing = task.status !== "done";
+                  transaction.update(taskRef, {
+                    status: completing ? "done" : "pending",
+                    updatedAt: serverTimestamp()
+                  });
+
+                  if (completing) {
+                    transaction.set(notificationRef, {
+                      type: "task_completed",
+                      taskId: id,
+                      taskTitle: task.title || "Untitled task",
+                      assignedTo: uid,
+                      read: false,
+                      createdAt: serverTimestamp()
+                    });
+                  }
+                });
+              } catch (err) {
+                alert("Failed to update task: " + err.message);
+                console.error(err);
+              } finally {
+                btn.disabled = false;
+              }
             };
           });
         },
@@ -404,18 +422,27 @@
       chatStatus.textContent = "Chatting with admin";
       chatStatus.className = "text-xs text-green-400";
 
-      chatUnsubscribe = onSnapshot(collection(db, "messages"), (snap) => {
-        const msgs = [];
-        snap.forEach((d) => {
-          const data = d.data();
-          if ((data.senderId === uid && data.receiverId === adminUid) ||
-              (data.senderId === adminUid && data.receiverId === uid)) {
-            msgs.push({ id: d.id, ...data });
-          }
-        });
-        msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-        renderChat(msgs);
-      });
+      chatUnsubscribe = onSnapshot(
+        query(
+          collection(db, "messages"),
+          or(
+            where("senderId", "==", uid),
+            where("receiverId", "==", uid)
+          )
+        ),
+        (snap) => {
+          const msgs = [];
+          snap.forEach((d) => {
+            const data = d.data();
+            if ((data.senderId === uid && data.receiverId === adminUid) ||
+                (data.senderId === adminUid && data.receiverId === uid)) {
+              msgs.push({ id: d.id, ...data });
+            }
+          });
+          msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+          renderChat(msgs);
+        }
+      );
     }
 
     function renderChat(msgs) {

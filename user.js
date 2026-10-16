@@ -1,5 +1,5 @@
 import { auth, db } from "./firebase-config.js";
-import { currentUser } from "./auth.js";
+import { currentUser, ADMIN_UID, getRole } from "./auth.js";
 import {
   collection,
   query,
@@ -14,13 +14,13 @@ import {
 let tasksUnsubscribe = null;
 
 export function initUser(ui) {
-  if (!auth.currentUser || auth.currentUser.email === "kyambaddealex55@gmail.com") return;
+  if (!auth.currentUser || auth.currentUser.uid === ADMIN_UID) return;
   renderUserDashboard(ui);
 }
 
 export function renderUserDashboard(ui) {
   const user = auth.currentUser;
-  const role = user.email === "kyambaddealex55@gmail.com" ? "admin" : "girlfriend";
+  const role = getRole(user.uid);
 
   ui.showSection("user-dashboard");
   ui.hideSection("admin-panel");

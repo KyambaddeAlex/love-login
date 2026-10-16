@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     function isAdmin() {
-      return request.auth != null && request.auth.token.email == "kyambaddealex55@gmail.com";
+      return request.auth != null && request.auth.uid == "cRsPXPZrpxQAwAvA7D6Jd9uU9ca2";
     }
 
     // Users collection
@@ -11,9 +11,16 @@ service cloud.firestore {
       allow read: if request.auth != null && (
         isAdmin() || request.auth.uid == userId
       );
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (
-        isAdmin() || request.auth.uid == userId
+      allow create: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.email == request.auth.token.email &&
+        request.resource.data.role == (
+          request.auth.uid == "cRsPXPZrpxQAwAvA7D6Jd9uU9ca2" ? "admin" : "girlfriend"
+        );
+      allow update: if request.auth != null && (isAdmin() || (
+        request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(["username", "age", "bio", "photoURL"])
+      )
       );
       allow delete: if request.auth != null && (
         isAdmin() || request.auth.uid == userId
@@ -27,7 +34,12 @@ service cloud.firestore {
       );
       allow create: if request.auth != null && isAdmin();
       allow update: if request.auth != null && (
-        isAdmin() || request.auth.uid == resource.data.assignedTo
+        isAdmin() || (
+          request.auth.uid == resource.data.assignedTo &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["status", "updatedAt"]) &&
+          request.resource.data.status in ["pending", "done"]
+        )
       );
       allow delete: if request.auth != null && isAdmin();
     }
@@ -40,9 +52,9 @@ service cloud.firestore {
         request.auth.uid == resource.data.receiverId
       );
       allow create: if request.auth != null && (
-        isAdmin() ||
-        request.auth.uid == request.data.senderId ||
-        request.auth.uid == request.data.receiverId
+        request.resource.data.senderId == request.auth.uid && (
+          isAdmin() || request.resource.data.receiverId == "cRsPXPZrpxQAwAvA7D6Jd9uU9ca2"
+        )
       );
       allow update: if request.auth != null && (
         isAdmin() ||
@@ -51,10 +63,30 @@ service cloud.firestore {
       allow delete: if request.auth != null && isAdmin();
     }
 
+    match /notifications/{notificationId} {
+      allow read: if isAdmin();
+      allow create: if request.auth != null &&
+        request.resource.data.type == "task_completed" &&
+        request.resource.data.assignedTo == request.auth.uid &&
+        request.resource.data.read == false &&
+        request.resource.data.createdAt == request.time &&
+        exists(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)) &&
+        get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.assignedTo == request.auth.uid &&
+        get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status != "done" &&
+        getAfter(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status == "done" &&
+        request.resource.data.taskTitle == get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.title;
+      allow update: if isAdmin() &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read", "readAt"]) &&
+        request.resource.data.read == true &&
+        request.resource.data.readAt == request.time;
+      allow delete: if isAdmin();
+    }
+
     // Stories collection: read for all authenticated; write for author/admin.
     match /stories/{storyId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
+      allow create: if request.auth != null &&
+        request.resource.data.authorId == request.auth.uid;
       allow update: if request.auth != null && (
         isAdmin() || request.auth.uid == resource.data.authorId
       );

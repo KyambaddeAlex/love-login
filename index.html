@@ -77,7 +77,7 @@
           <p id="msg-signup" class="text-xs text-red-400 h-4 hidden"></p>
         </form>
 
-        <p class="text-center text-xs text-slate-600 mt-6">Admin: kyambaddealex55@gmail.com</p>
+        <p class="text-center text-xs text-slate-600 mt-6">Admin: Kyambadde Alex</p>
       </div>
     </section>
 
@@ -112,6 +112,32 @@
               </div>
               <button type="submit" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Create Task</button>
             </form>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="text-lg font-bold text-white">Task progress</h3>
+              <span id="admin-task-summary" class="text-xs text-slate-400">Loading tasks...</span>
+            </div>
+            <p id="admin-completion-notice" role="status" aria-live="polite" class="hidden mt-4 rounded-lg border border-green-700/60 bg-green-950/40 px-4 py-3 text-sm text-green-300"></p>
+            <div class="mt-5 border-t border-slate-800 pt-5">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <h4 class="text-sm font-semibold text-white">Recent completions</h4>
+                <div class="flex items-center gap-3">
+                  <span id="admin-notification-count" class="text-xs text-slate-400">0 new</span>
+                  <button id="admin-mark-notifications-read" type="button" disabled class="text-xs text-pink-400 hover:text-pink-300 disabled:cursor-not-allowed">Mark all read</button>
+                </div>
+              </div>
+              <div id="admin-notifications-list" class="space-y-2">
+                <p class="text-slate-500 text-sm">No completed tasks yet.</p>
+              </div>
+            </div>
+            <div class="mt-5 border-t border-slate-800 pt-5">
+              <h4 class="text-sm font-semibold text-white mb-3">Assigned tasks</h4>
+              <div id="admin-tasks-list" class="space-y-2">
+                <p class="text-slate-500 text-sm">Loading tasks...</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -162,12 +188,12 @@
   <script type="module">
     import { auth } from "./firebase-config.js";
     import { db } from "./firebase-config.js";
-    import { ADMIN_EMAIL, register, login, logout, initAuth, currentUser } from "./auth.js";
+    import { register, login, logout, initAuth, currentUser, getRole, ADMIN_UID } from "./auth.js";
     import { initAdmin, renderAdminPanel, destroyAdmin } from "./admin.js";
     import { initUser, renderUserDashboard, destroyUser } from "./user.js";
     import {
       collection, onSnapshot, doc, addDoc,
-      serverTimestamp, getDocs
+      serverTimestamp, getDocs, query, where, or
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
     const ui = {
@@ -195,8 +221,6 @@
       }
     }
 
-    initAuth(handleAuthChange);
-
     // Logout
     ui.getElement("nav-logout").onclick = () => logout().catch(console.error);
 
@@ -223,18 +247,6 @@
     ui.getElement("show-login").onclick = showLogin;
     tabSignup.onclick = showSignup;
     tabLogin.onclick = showLogin;
-
-    // Login submit
-    formLogin.onsubmit = async (e) => {
-      e.preventDefault();
-      const email = ui.getElement("login-email").value.trim();
-      const password = ui.getElement("login-password").value;
-      try {
-        await login(email, password);
-      } catch (err) {
-        ui.showMessage("msg-login", err.message);
-      }
-    };
 
     // Signup submit
     formSignup.onsubmit = async (e) => {
@@ -286,7 +298,7 @@
         const girls = [];
         snap.forEach((d) => {
           const data = d.data();
-          if (data.role === "girlfriend") {
+          if (d.id !== ADMIN_UID) {
             girls.push({ id: d.id, data });
           }
         });
@@ -294,7 +306,7 @@
         girls.forEach(({ id, data }) => {
           const opt = document.createElement("option");
           opt.value = id;
-          opt.textContent = `${data.username || data.email} (${data.email})`;
+          opt.textContent = data.username || "Unnamed account";
           adminChatUserSelect.appendChild(opt);
         });
         adminChatStatus.textContent = `${girls.length} girlfriend${girls.length !== 1 ? "s" : ""} available`;
@@ -336,18 +348,27 @@
       btnAdminSendChat.className = "bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-pink-900/30 flex items-center justify-center text-opacity-100";
       adminChatMessages.innerHTML = '<div class="text-center py-4 text-slate-500 text-xs">Loading messages...</div>';
 
-      adminChatUnsubscribe = onSnapshot(collection(db, "messages"), (snap) => {
-        const msgs = [];
-        snap.forEach((d) => {
-          const data = d.data();
-          if ((data.senderId === auth.currentUser.uid && data.receiverId === uid) ||
-              (data.senderId === uid && data.receiverId === auth.currentUser.uid)) {
-            msgs.push({ id: d.id, ...data });
-          }
-        });
-        msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
-        renderAdminChat(msgs);
-      });
+      adminChatUnsubscribe = onSnapshot(
+        query(
+          collection(db, "messages"),
+          or(
+            where("senderId", "==", auth.currentUser.uid),
+            where("receiverId", "==", auth.currentUser.uid)
+          )
+        ),
+        (snap) => {
+          const msgs = [];
+          snap.forEach((d) => {
+            const data = d.data();
+            if ((data.senderId === auth.currentUser.uid && data.receiverId === uid) ||
+                (data.senderId === uid && data.receiverId === auth.currentUser.uid)) {
+              msgs.push({ id: d.id, ...data });
+            }
+          });
+          msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
+          renderAdminChat(msgs);
+        }
+      );
     }
 
     adminChatUserSelect.onchange = (e) => {
@@ -402,7 +423,7 @@
         if (adminChatUnsubscribe) adminChatUnsubscribe();
         return;
       }
-      const role = user.email === ADMIN_EMAIL ? "admin" : "girlfriend";
+      const role = getRole(user.uid);
       ui.getElement("nav-role").textContent = role;
       if (role === "admin") {
         setAuthView(false);
