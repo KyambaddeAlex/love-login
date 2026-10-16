@@ -166,7 +166,7 @@
     import { initAdmin, renderAdminPanel, destroyAdmin } from "./admin.js";
     import { initUser, renderUserDashboard, destroyUser } from "./user.js";
     import {
-      collection, query, where, orderBy, onSnapshot, doc, addDoc,
+      collection, onSnapshot, doc, addDoc,
       serverTimestamp, getDocs
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
@@ -268,17 +268,22 @@
     // Load girlfriends into dropdown
     async function loadGirlfriends() {
       try {
-        const q = query(collection(db, "users"), where("role", "==", "girlfriend"));
-        const snap = await getDocs(q);
-        adminChatUserSelect.innerHTML = '<option value="">Select a girlfriend</option>';
+        const snap = await getDocs(collection(db, "users"));
+        const girls = [];
         snap.forEach((d) => {
           const data = d.data();
+          if (data.role === "girlfriend") {
+            girls.push({ id: d.id, data });
+          }
+        });
+        adminChatUserSelect.innerHTML = '<option value="">Select a girlfriend</option>';
+        girls.forEach(({ id, data }) => {
           const opt = document.createElement("option");
-          opt.value = d.id;
+          opt.value = id;
           opt.textContent = `${data.username || data.email} (${data.email})`;
           adminChatUserSelect.appendChild(opt);
         });
-        adminChatStatus.textContent = `${snap.size} girlfriend${snap.size !== 1 ? "s" : ""} available`;
+        adminChatStatus.textContent = `${girls.length} girlfriend${girls.length !== 1 ? "s" : ""} available`;
         adminChatStatus.className = "text-xs text-green-400";
       } catch (err) {
         adminChatStatus.textContent = "Failed to load users";

@@ -2,8 +2,6 @@ import { auth, db } from "./firebase-config.js";
 import { ADMIN_EMAIL } from "./auth.js";
 import {
   collection,
-  query,
-  orderBy,
   onSnapshot,
   addDoc,
   serverTimestamp,
@@ -33,13 +31,22 @@ export function renderAdminPanel(ui) {
   userSelect.innerHTML = '<option value="">Loading users...</option>';
 
   usersUnsubscribe = onSnapshot(
-    query(collection(db, "users"), orderBy("createdAt", "desc")),
+    collection(db, "users"),
     (snap) => {
       usersContainer.innerHTML = "";
       userSelect.innerHTML = '<option value="">Select a user</option>';
 
+      const users = [];
       snap.forEach((docSnap) => {
-        const data = docSnap.data();
+        users.push({ id: docSnap.id, data: docSnap.data() });
+      });
+      users.sort((a, b) => {
+        const da = a.data.createdAt ? new Date(a.data.createdAt).getTime() : 0;
+        const db_ = b.data.createdAt ? new Date(b.data.createdAt).getTime() : 0;
+        return db_ - da;
+      });
+
+      users.forEach(({ id, data }) => {
         const isAdmin = data.email === ADMIN_EMAIL;
 
         const card = document.createElement("div");
@@ -50,7 +57,7 @@ export function renderAdminPanel(ui) {
             <span class="text-xs text-slate-500">${escapeHtml(data.email || "")}</span>
             ${isAdmin ? '<span class="inline-block mt-1 sm:mt-0 px-2 py-0.5 rounded text-[10px] font-bold bg-pink-600 text-white">ADMIN</span>' : ""}
           </div>
-          <div class="text-xs text-slate-400 mt-2 sm:mt-0">UID: ${docSnap.id}</div>
+          <div class="text-xs text-slate-400 mt-2 sm:mt-0">UID: ${id}</div>
         `;
         usersContainer.appendChild(card);
 

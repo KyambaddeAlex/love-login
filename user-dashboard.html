@@ -162,7 +162,7 @@
     import { auth, db } from "./firebase-config.js";
     import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
     import {
-      collection, query, where, orderBy, onSnapshot, doc, updateDoc,
+      collection, query, where, onSnapshot, doc, updateDoc,
       serverTimestamp, addDoc, getDocs
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
@@ -269,7 +269,7 @@
       emptyTasks.classList.add("hidden");
 
       tasksUnsubscribe = onSnapshot(
-        query(collection(db, "tasks"), where("assignedTo", "==", uid), orderBy("createdAt", "desc")),
+        query(collection(db, "tasks"), where("assignedTo", "==", uid)),
         (snap) => {
           tasksContainer.innerHTML = "";
           if (snap.empty) {
@@ -280,10 +280,20 @@
           }
           tasksContainer.classList.remove("hidden");
           emptyTasks.classList.add("hidden");
-          taskCountBadge.textContent = `${snap.size} task${snap.size !== 1 ? "s" : ""}`;
 
+          const tasks = [];
           snap.forEach((docSnap) => {
-            const data = docSnap.data();
+            tasks.push({ id: docSnap.id, data: docSnap.data() });
+          });
+          tasks.sort((a, b) => {
+            const da = a.data.createdAt ? new Date(a.data.createdAt).getTime() : 0;
+            const db_ = b.data.createdAt ? new Date(b.data.createdAt).getTime() : 0;
+            return db_ - da;
+          });
+
+          taskCountBadge.textContent = `${tasks.length} task${tasks.length !== 1 ? "s" : ""}`;
+
+          tasks.forEach(({ id, data }) => {
             const done = data.status === "done";
             const el = document.createElement("div");
             el.className = `bg-slate-800 border border-slate-700 rounded-xl p-4 mb-3 flex items-center justify-between ${done ? "bg-slate-800/60" : ""}`;
@@ -296,7 +306,7 @@
                   <span class="capitalize ${done ? "text-pink-400" : "text-slate-400"}">${data.status}</span>
                 </div>
               </div>
-              <button data-id="${docSnap.id}" data-done="${done}"
+              <button data-id="${id}" data-done="${done}"
                 class="px-4 py-2 rounded-lg text-sm font-medium transition ${done ? "bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600" : "bg-pink-600 hover:bg-pink-500 text-white shadow-lg shadow-pink-900/20"}">
                 ${done ? "Mark Pending" : "Mark Done"}
               </button>
@@ -432,15 +442,24 @@
     /* ---------- Stories ---------- */
     function loadStories() {
       storiesUnsubscribe = onSnapshot(
-        query(collection(db, "stories"), orderBy("createdAt", "desc")),
+        collection(db, "stories"),
         (snap) => {
           storiesList.innerHTML = "";
           if (snap.empty) {
             storiesList.innerHTML = '<p class="text-slate-400 text-sm">No stories yet. Share your first memory!</p>';
             return;
           }
+          const stories = [];
           snap.forEach((d) => {
-            const data = d.data();
+            stories.push({ id: d.id, data: d.data() });
+          });
+          stories.sort((a, b) => {
+            const da = a.data.createdAt ? new Date(a.data.createdAt).getTime() : 0;
+            const db_ = b.data.createdAt ? new Date(b.data.createdAt).getTime() : 0;
+            return db_ - da;
+          });
+
+          stories.forEach(({ id, data }) => {
             const el = document.createElement("div");
             el.className = "bg-slate-800/50 border border-slate-700 rounded-xl p-4";
             el.innerHTML = `
