@@ -30,13 +30,20 @@
   <main class="max-w-5xl mx-auto px-4 py-8">
     <!-- Profile Header -->
     <header class="mb-8">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="bg-gradient-to-br from-slate-900 via-slate-900/80 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-pink-600/10 rounded-full blur-3xl -mt-12 -mr-12"></div>
         <div class="flex items-center gap-4">
-          <div class="w-14 h-14 rounded-full bg-gradient-to-br from-pink-600 to-rose-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-pink-900/30">
-            <span id="profile-avatar">L</span>
+          <div class="relative flex-shrink-0">
+            <div class="w-14 h-14 rounded-full bg-gradient-to-br from-pink-600 to-rose-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-pink-900/30 border-4 border-slate-800 relative overflow-hidden">
+              <img id="header-profile-picture" src="" alt="Profile picture" class="w-full h-full object-cover rounded-full hidden">
+              <span id="header-profile-avatar">L</span>
+            </div>
           </div>
           <div>
-            <h1 id="user-welcome" class="text-2xl font-bold text-white">Welcome</h1>
+            <div class="flex items-baseline gap-2 mb-1">
+              <h1 id="user-welcome" class="text-2xl font-bold text-white tracking-tight">Welcome</h1>
+              <span id="header-role-badge" class="px-3 py-1 rounded-full bg-pink-600/20 text-pink-400 text-xs font-semibold border border-pink-500/30 uppercase tracking-wider">Girlfriend</span>
+            </div>
             <p id="user-profile-meta" class="text-slate-400 text-sm">Loading profile...</p>
           </div>
         </div>
@@ -51,31 +58,58 @@
       <div class="lg:col-span-4 space-y-6">
 
         <!-- Profile Card -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-          <h3 class="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center gap-2 text-pink-400">
-            <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Your Profile
-          </h3>
-          <div class="space-y-3">
-            <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800">
-              <span class="w-6 text-slate-500 text-sm">👤</span>
-              <span class="font-medium text-slate-200" id="display-username">—</span>
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500"></div>
+          <div class="flex flex-col md:flex-row md:items-center gap-6 mb-6">
+            <div class="relative flex-shrink-0">
+              <div class="w-24 h-24 rounded-full bg-gradient-to-br from-pink-600 to-rose-500 flex items-center justify-center text-white font-bold text-3xl shadow-2xl shadow-pink-900/40 border-4 border-slate-800 relative overflow-hidden">
+                <img id="profile-picture" src="" alt="Profile picture" class="w-full h-full object-cover rounded-full hidden">
+                <span id="profile-avatar-fallback">L</span>
+              </div>
+              <div class="absolute -bottom-3 -right-3 bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-slate-900">
+                ✨
+              </div>
             </div>
-            <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800">
-              <span class="w-6 text-slate-500 text-sm">🎂</span>
-              <span class="font-medium text-slate-200" id="display-age">—</span>
+            <div>
+              <div class="flex items-baseline gap-2 mb-1">
+                <h2 id="display-username" class="text-2xl font-bold text-white tracking-tight">—</h2>
+                <span id="display-role-badge" class="px-3 py-1 rounded-full bg-pink-600/20 text-pink-400 text-xs font-semibold border border-pink-500/30 uppercase tracking-wider">Girlfriend</span>
+              </div>
+              <p id="user-profile-meta" class="text-slate-400 text-sm">Loading profile...</p>
+              <div class="flex items-center gap-4 mt-4 text-slate-400 text-sm">
+                <span class="flex items-center gap-2"><span class="w-4 h-4 bg-pink-500/20 text-pink-400 rounded-full flex items-center justify-center text-[10px]">🎂</span><span id="display-age">—</span></span>
+                <span class="flex items-center gap-2"><span class="w-4 h-4 bg-pink-500/20 text-pink-400 rounded-full flex items-center justify-center text-[10px]">📅</span><span id="display-joined">—</span></span>
+              </div>
             </div>
-            <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800">
-              <span class="w-6 text-slate-500 text-sm">✉️</span>
-              <span class="font-medium text-slate-200 text-xs truncate" id="display-email">—</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+              <div class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Email</div>
+              <div class="text-sm text-slate-200 truncate" id="display-email">—</div>
             </div>
-            <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800">
-              <span class="w-6 text-slate-500 text-sm">🏷️</span>
-              <span class="font-medium text-slate-200 text-xs" id="display-role">girlfriend</span>
+            <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+              <div class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Member Since</div>
+              <div class="text-sm text-slate-200" id="display-member-since">—</div>
             </div>
-            <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-950/50 border border-slate-800">
-              <span class="w-6 text-slate-500 text-sm">📅</span>
-              <span class="font-medium text-slate-200 text-xs" id="display-joined">—</span>
+            <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+              <div class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Account Role</div>
+              <div class="text-sm text-slate-200 capitalize" id="display-role">girlfriend</div>
             </div>
+            <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4">
+              <div class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Profile Strength</div>
+              <div class="flex items-center gap-2">
+                <div class="h-2 w-full bg-slate-800 rounded-full overflow-hidden">
+                  <div class="h-full bg-gradient-to-r from-pink-500 to-rose-500 w-3/4"></div>
+                </div>
+                <span class="text-xs text-pink-400 font-semibold">75%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-6 border-t border-slate-800">
+            <h4 class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-3">About</h4>
+            <p id="display-bio" class="text-sm text-slate-300 italic">No bio added yet. Complete your profile to share more about yourself.</p>
           </div>
         </div>
 
@@ -165,7 +199,6 @@
       collection, query, where, onSnapshot, doc, updateDoc,
       serverTimestamp, addDoc, getDocs
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-
     const ADMIN_EMAIL = "kyambaddealex55@gmail.com";
 
     // DOM refs
@@ -178,7 +211,6 @@
     const displayEmail = document.getElementById("display-email");
     const displayRole = document.getElementById("display-role");
     const displayJoined = document.getElementById("display-joined");
-    const profileAvatar = document.getElementById("profile-avatar");
     const taskCountBadge = document.getElementById("task-count-badge");
 
     const morningMessage = document.getElementById("morning-message");
@@ -240,10 +272,13 @@
 
       // Find admin uid
       try {
-        const adminSnap = await getDocs(query(collection(db, "users"), where("email", "==", ADMIN_EMAIL)));
-        if (!adminSnap.empty) {
-          adminUid = adminSnap.docs[0].id;
-        }
+        const adminSnap = await getDocs(collection(db, "users"));
+        adminSnap.forEach((d) => {
+          const data = d.data();
+          if (data.email === ADMIN_EMAIL) {
+            adminUid = d.id;
+          }
+        });
       } catch (e) { console.error(e); }
 
       loadTasks(user.uid);
@@ -253,7 +288,23 @@
 
     function renderProfile(data) {
       const initial = (data.username || data.email || "U").charAt(0).toUpperCase();
-      profileAvatar.textContent = initial;
+
+      // Avatar image + fallback (header + profile card)
+      [document.getElementById("header-profile-picture"), document.getElementById("profile-picture")].forEach((img) => {
+        if (!img) return;
+        if (data.photoURL) {
+          img.src = data.photoURL;
+          img.classList.remove("hidden");
+        } else {
+          img.classList.add("hidden");
+        }
+      });
+      [document.getElementById("header-profile-avatar"), document.getElementById("profile-avatar-fallback")].forEach((el) => {
+        if (!el) return;
+        if (data.photoURL) el.classList.add("hidden");
+        else { el.classList.remove("hidden"); el.textContent = initial; }
+      });
+
       welcomeEl.textContent = `Welcome, ${data.username || "Love"}`;
       profileMeta.textContent = `${data.role} • ${data.email}`;
       displayUsername.textContent = data.username || "—";
@@ -261,6 +312,17 @@
       displayEmail.textContent = data.email || "—";
       displayRole.textContent = (data.role || "girlfriend").charAt(0).toUpperCase() + (data.role || "girlfriend").slice(1);
       displayJoined.textContent = data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "—";
+
+      const roleBadge = document.getElementById("display-role-badge");
+      const headerRoleBadge = document.getElementById("header-role-badge");
+      roleBadge.textContent = (data.role || "girlfriend").toUpperCase();
+      headerRoleBadge.textContent = (data.role || "girlfriend").toUpperCase();
+
+      const memberSince = document.getElementById("display-member-since");
+      memberSince.textContent = data.createdAt ? new Date(data.createdAt).toLocaleDateString() : "—";
+
+      const bio = document.getElementById("display-bio");
+      bio.textContent = data.bio ? data.bio : "No bio added yet. Complete your profile to share more about yourself.";
     }
 
     /* ---------- Tasks ---------- */
@@ -342,15 +404,6 @@
       chatStatus.textContent = "Chatting with admin";
       chatStatus.className = "text-xs text-green-400";
 
-      const q = query(
-        collection(db, "messages"),
-        where("receiverId", "in", [uid, adminUid]),
-        where("senderId", "in", [uid, adminUid]),
-        orderBy("timestamp", "asc")
-      );
-
-      // Firestore doesn't support multiple 'where' on different fields with 'in' like this easily.
-      // Instead fetch all and filter client-side for this pair.
       chatUnsubscribe = onSnapshot(collection(db, "messages"), (snap) => {
         const msgs = [];
         snap.forEach((d) => {

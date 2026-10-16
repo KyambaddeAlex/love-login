@@ -63,8 +63,8 @@ export function renderAdminPanel(ui) {
 
         if (!isAdmin) {
           const opt = document.createElement("option");
-          opt.value = docSnap.id;
-          opt.textContent = `${data.username || ""} (${data.email || ""})`;
+          opt.value = id;
+          opt.textContent = `${data.username || ""} (${data.email || "")}`;
           userSelect.appendChild(opt);
         }
       });
