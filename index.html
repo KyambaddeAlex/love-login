@@ -206,7 +206,7 @@
             </h3>
             <div class="flex flex-col items-end gap-1">
               <span id="admin-chat-status" class="text-xs text-slate-500">Loading...</span>
-              <button id="btn-enable-admin-push" type="button" class="text-xs text-pink-400 hover:text-pink-300">Enable message alerts</button>
+              <button id="btn-enable-admin-push" type="button" class="text-xs text-pink-400 hover:text-pink-300">Enable alerts on this device</button>
               <span id="admin-push-status" role="status" aria-live="polite" class="text-xs text-slate-500"></span>
             </div>
           </div>
@@ -515,9 +515,9 @@
           adminPushStatus.textContent = result.sent
             ? `Message sent; push alert queued for ${result.sent} device${result.sent === 1 ? "" : "s"}.`
             : result.skippedSenderDevices
-              ? "Message sent; this sender device was skipped to avoid notifying the admin."
-              : "Message sent; this girlfriend has not enabled push alerts.";
-          adminPushStatus.className = result.sent ? "text-xs text-green-400" : "text-xs text-slate-400";
+              ? "Message sent, but no alert was sent because all devices registered for this girlfriend are also linked to your account. For privacy, sender devices are excluded. Ask her to enable alerts on a different device."
+              : "Message sent, but no notification device is registered for this girlfriend. Ask her to tap Enable alerts on her device.";
+          adminPushStatus.className = result.sent ? "text-xs text-green-400" : "text-xs text-amber-300";
         } catch (pushError) {
           console.error("Message sent, but push delivery failed:", pushError);
           adminPushStatus.textContent = `Message sent, but push alert failed: ${pushError.message}`;
