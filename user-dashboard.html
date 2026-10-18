@@ -324,6 +324,8 @@
         const result = await sendPushNotification(messageId);
         userPushStatus.textContent = result.sent
           ? "Message sent; push alert queued for Alex."
+          : result.skippedSenderDevices
+            ? "Message sent; this sender device was skipped to avoid notifying the girlfriend."
           : "Message sent; Alex has not enabled push alerts.";
         userPushStatus.className = result.sent ? "text-xs text-green-400" : "text-xs text-slate-400";
       } catch (error) {
