@@ -179,7 +179,9 @@ export async function sendPushNotification(messageId) {
   });
   const result = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(result.error || `Push service returned HTTP ${response.status}.`);
+    const reasons = Array.isArray(result.reasons) ? result.reasons.join("; ") : "";
+    const message = result.error || `Push service returned HTTP ${response.status}.`;
+    throw new Error(reasons ? `${message} ${reasons}` : message);
   }
   return result;
 }
