@@ -248,7 +248,7 @@
     import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
     import {
       collection, query, where, or, onSnapshot, doc, updateDoc,
-      serverTimestamp, addDoc, runTransaction
+      serverTimestamp, addDoc, setDoc
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
     import { ADMIN_UID, getRole } from "./auth.js";
     import { initializePushPrompt, sendPushNotification } from "./push-notifications.js";
@@ -543,42 +543,41 @@
                 }
 
               const taskRef = doc(db, "tasks", id);
-              const notificationRef = doc(collection(db, "notifications"));
-                completeButton.disabled = true;
-                completionStatus.textContent = "Saving your update...";
-                completionStatus.className = "text-xs text-slate-400";
+              completeButton.disabled = true;
+              completionStatus.textContent = "Saving your update...";
+              completionStatus.className = "text-xs text-slate-400";
               try {
-                await runTransaction(db, async (transaction) => {
-                  const taskSnap = await transaction.get(taskRef);
-                  if (!taskSnap.exists()) throw new Error("This task no longer exists.");
-
-                  const task = taskSnap.data();
-                  if (task.assignedTo !== uid) throw new Error("You can only update your own tasks.");
-                  if (task.status === "done") throw new Error("This task has already been completed.");
-                  transaction.update(taskRef, {
-                      status: "done",
-                      completionNote,
-                      completedAt: serverTimestamp(),
-                    updatedAt: serverTimestamp()
-                  });
-                    transaction.set(notificationRef, {
-                      type: "task_completed",
-                      taskId: id,
-                      taskTitle: task.title || "Untitled task",
-                      completionNote,
-                      assignedTo: uid,
-                      read: false,
-                      createdAt: serverTimestamp()
-                    });
+                await updateDoc(taskRef, {
+                  status: "done",
+                  completionNote,
+                  completedAt: serverTimestamp(),
+                  updatedAt: serverTimestamp()
                 });
-                  completionStatus.textContent = "Your update was sent to Alex.";
-                  completionStatus.className = "text-xs text-green-400";
-                } catch (err) {
-                  completionStatus.textContent = `Could not complete the task: ${err.message}`;
-                  completionStatus.className = "text-xs text-red-400";
-                  console.error("Failed to complete task:", err);
-                  completeButton.disabled = false;
+
+                completionStatus.textContent = "Your update was sent to Alex.";
+                completionStatus.className = "text-xs text-green-400";
+
+                try {
+                  await setDoc(doc(db, "notifications", id), {
+                    type: "task_completed",
+                    taskId: id,
+                    taskTitle: data.title || "Untitled task",
+                    completionNote,
+                    assignedTo: uid,
+                    read: false,
+                    createdAt: serverTimestamp()
+                  });
+                } catch (notificationError) {
+                  console.error("Task completed, but its admin notification could not be saved:", notificationError);
+                  completionStatus.textContent = "Your task update was sent to Alex, but the notification could not be saved.";
+                  completionStatus.className = "text-xs text-amber-400";
                 }
+              } catch (err) {
+                completionStatus.textContent = `Could not save your task update: ${err.message}`;
+                completionStatus.className = "text-xs text-red-400";
+                console.error("Failed to save task completion:", err);
+                completeButton.disabled = false;
+              }
               };
             }
             taskDetails.appendChild(taskContent);

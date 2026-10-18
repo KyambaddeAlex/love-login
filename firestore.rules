@@ -88,6 +88,7 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isAdmin();
       allow create: if request.auth != null &&
+        notificationId == request.resource.data.taskId &&
         request.resource.data.keys().hasOnly([
           "type", "taskId", "taskTitle", "completionNote", "assignedTo", "read", "createdAt"
         ]) &&
@@ -100,10 +101,9 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time &&
         exists(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)) &&
         get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.assignedTo == request.auth.uid &&
-        get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status != "done" &&
-        getAfter(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status == "done" &&
+        get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status == "done" &&
         request.resource.data.taskTitle == get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.title &&
-        request.resource.data.completionNote == getAfter(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.completionNote;
+        request.resource.data.completionNote == get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.completionNote;
       allow update: if isAdmin() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read", "readAt"]) &&
         request.resource.data.read == true &&
