@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Your Dashboard | Love Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./love-login.css">
   <style>
-    body { font-family: 'Inter', sans-serif; }
     .chat-message { animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
   </style>
@@ -18,7 +18,10 @@
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded bg-pink-600 flex items-center justify-center text-white font-bold text-lg">L</div>
-        <span class="font-bold text-xl tracking-tight text-white">LOVE<span class="text-pink-500">LOGIN</span></span>
+        <div>
+          <span class="font-bold text-xl tracking-tight text-white">LOVE<span class="text-pink-500">LOGIN</span></span>
+          <span class="hidden sm:block text-[10px] text-slate-500 tracking-[0.16em] uppercase">A little space for us</span>
+        </div>
       </div>
       <div class="flex items-center gap-4">
         <span id="nav-role" class="text-xs text-slate-400 uppercase tracking-wider font-medium">girlfriend</span>

@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Love Login</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-  </style>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./love-login.css">
 </head>
 <body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-pink-500 selection:text-white">
 
@@ -16,7 +14,10 @@
     <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <div class="w-8 h-8 rounded bg-pink-600 flex items-center justify-center text-white font-bold text-lg">L</div>
-        <span class="font-bold text-xl tracking-tight text-white">LOVE<span class="text-pink-500">LOGIN</span></span>
+        <div>
+          <span class="font-bold text-xl tracking-tight text-white">LOVE<span class="text-pink-500">LOGIN</span></span>
+          <span class="hidden sm:block text-[10px] text-slate-500 tracking-[0.16em] uppercase">A little space for us</span>
+        </div>
       </div>
       <div id="nav-user" class="hidden items-center gap-4">
         <span id="nav-role" class="text-xs text-slate-400 uppercase tracking-wider"></span>
@@ -28,6 +29,25 @@
   <main class="max-w-5xl mx-auto px-4 py-8">
     <!-- Auth View -->
     <section id="auth-view" class="max-w-md mx-auto">
+      <div class="auth-intro">
+        <span class="auth-eyebrow">A private space for two</span>
+        <h1>Closer, even in the <span>little things.</span></h1>
+        <p class="auth-intro-copy">A thoughtful place to share a story, keep up with the little things, and stay close throughout the day.</p>
+        <div class="auth-highlights">
+          <div class="auth-highlight">
+            <span class="auth-highlight-mark" aria-hidden="true">01</span>
+            <span>Share private stories and memories</span>
+          </div>
+          <div class="auth-highlight">
+            <span class="auth-highlight-mark" aria-hidden="true">02</span>
+            <span>Stay in touch with personal messages</span>
+          </div>
+          <div class="auth-highlight">
+            <span class="auth-highlight-mark" aria-hidden="true">03</span>
+            <span>Keep your shared tasks in one place</span>
+          </div>
+        </div>
+      </div>
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
         <div class="text-center mb-8">
           <h2 class="text-2xl font-bold text-white">Welcome back</h2>
@@ -83,6 +103,11 @@
 
     <!-- Admin Panel -->
     <section id="admin-panel" class="hidden">
+      <header class="mb-7">
+        <span class="section-eyebrow">Your overview</span>
+        <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">Admin dashboard</h1>
+        <p class="mt-2 text-sm text-slate-500">Manage accounts, tasks, stories and conversations from one place.</p>
+      </header>
       <div class="flex flex-col lg:flex-row gap-6">
         <div class="lg:w-1/3 space-y-6">
           <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
