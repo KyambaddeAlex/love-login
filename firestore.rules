@@ -39,18 +39,28 @@ service cloud.firestore {
         request.resource.data.updatedAt == request.time;
     }
 
-    // Tasks collection: write/delete strictly admin.
+    // Admins manage tasks; assignees can submit one immutable completion.
     match /tasks/{taskId} {
       allow read: if request.auth != null && (
         isAdmin() || request.auth.uid == resource.data.assignedTo
       );
       allow create: if request.auth != null && isAdmin();
       allow update: if request.auth != null && (
-        isAdmin() || (
+        (isAdmin() &&
+          request.resource.data.get("completionNote", null) == resource.data.get("completionNote", null) &&
+          request.resource.data.get("completedAt", null) == resource.data.get("completedAt", null)
+        ) || (
           request.auth.uid == resource.data.assignedTo &&
+          resource.data.status != "done" &&
+          resource.data.get("completionNote", "") == "" &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["status", "updatedAt"]) &&
-          request.resource.data.status in ["pending", "done"]
+            .hasOnly(["status", "updatedAt", "completionNote", "completedAt"]) &&
+          request.resource.data.status == "done" &&
+          request.resource.data.completionNote is string &&
+          request.resource.data.completionNote.size() > 0 &&
+          request.resource.data.completionNote.size() <= 2000 &&
+          request.resource.data.updatedAt == request.time &&
+          request.resource.data.completedAt == request.time
         )
       );
       allow delete: if request.auth != null && isAdmin();
@@ -78,15 +88,22 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       allow read: if isAdmin();
       allow create: if request.auth != null &&
+        request.resource.data.keys().hasOnly([
+          "type", "taskId", "taskTitle", "completionNote", "assignedTo", "read", "createdAt"
+        ]) &&
         request.resource.data.type == "task_completed" &&
         request.resource.data.assignedTo == request.auth.uid &&
+        request.resource.data.completionNote is string &&
+        request.resource.data.completionNote.size() > 0 &&
+        request.resource.data.completionNote.size() <= 2000 &&
         request.resource.data.read == false &&
         request.resource.data.createdAt == request.time &&
         exists(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)) &&
         get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.assignedTo == request.auth.uid &&
         get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status != "done" &&
         getAfter(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status == "done" &&
-        request.resource.data.taskTitle == get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.title;
+        request.resource.data.taskTitle == get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.title &&
+        request.resource.data.completionNote == getAfter(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.completionNote;
       allow update: if isAdmin() &&
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read", "readAt"]) &&
         request.resource.data.read == true &&

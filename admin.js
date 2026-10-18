@@ -27,6 +27,11 @@ let storyRecords = [];
 let notificationsInitialized = false;
 let editingTaskId = null;
 
+export function initAdmin(ui) {
+  if (auth.currentUser && auth.currentUser.uid !== ADMIN_UID) return;
+  renderAdminPanel(ui);
+}
+
 export function renderAdminPanel(ui) {
   if (usersUnsubscribe) usersUnsubscribe();
   if (tasksUnsubscribe) tasksUnsubscribe();
@@ -34,6 +39,7 @@ export function renderAdminPanel(ui) {
   if (storiesUnsubscribe) storiesUnsubscribe();
 
   ui.showSection("admin-panel");
+  ui.hideSection("user-dashboard");
   ui.hideSection("auth-view");
 
   const usersContainer = ui.getElement("admin-users-list");
@@ -264,6 +270,15 @@ function renderTaskList(container, summary) {
     assigneeText.className = "text-xs text-slate-500 mt-1";
     assigneeText.textContent = `Assigned to ${assignee?.username || "Unknown account"}`;
     details.append(title, assigneeText);
+    if (task.status === "done") {
+      const noteLabel = document.createElement("p");
+      noteLabel.className = "mt-3 text-xs font-semibold uppercase tracking-wide text-pink-300";
+      noteLabel.textContent = "Girlfriend's completion note";
+      const completionNote = document.createElement("p");
+      completionNote.className = "mt-1 whitespace-pre-wrap break-words text-sm text-slate-300";
+      completionNote.textContent = task.completionNote || "No completion note was submitted.";
+      details.append(noteLabel, completionNote);
+    }
     const statusBadge = document.createElement("span");
     statusBadge.className = `inline-flex w-fit items-center rounded px-2.5 py-1 text-xs font-semibold ${task.status === "done" ? "bg-green-950 text-green-300" : "bg-slate-800 text-slate-300"}`;
     statusBadge.textContent = task.status || "pending";
@@ -436,6 +451,12 @@ function renderNotifications(container, count, markReadButton) {
     meta.className = "text-xs text-slate-500 mt-1";
     meta.textContent = timestampLabel(notification.createdAt);
     item.append(message, meta);
+    if (notification.completionNote) {
+      const completionNote = document.createElement("p");
+      completionNote.className = "mt-2 whitespace-pre-wrap break-words rounded-lg bg-slate-950/60 p-3 text-sm text-slate-300";
+      completionNote.textContent = notification.completionNote;
+      item.appendChild(completionNote);
+    }
     container.appendChild(item);
   });
 }

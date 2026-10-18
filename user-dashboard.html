@@ -7,61 +7,60 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./love-login.css">
+  <style>
+    .chat-message { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  </style>
 </head>
-<body class="app-shell bg-slate-950 text-slate-200 min-h-screen">
+<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-pink-500 selection:text-white">
 
-  <nav class="site-nav border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50" aria-label="Main navigation">
-    <div class="site-nav-inner max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <a class="brand-lockup flex items-center gap-2" href="./index.html" aria-label="Love Login home">
-        <span class="brand-mark w-8 h-8 rounded bg-pink-600 flex items-center justify-center text-white font-bold text-lg" aria-hidden="true">L</span>
-        <span class="brand-copy">
+  <nav class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded bg-pink-600 flex items-center justify-center text-white font-bold text-lg">L</div>
+        <div>
           <span class="font-bold text-xl tracking-tight text-white">LOVE<span class="text-pink-500">LOGIN</span></span>
           <span class="hidden sm:block text-[10px] text-slate-500 tracking-[0.16em] uppercase">A little space for us</span>
-        </span>
-      </a>
+        </div>
+      </div>
       <div class="flex items-center gap-4">
         <span id="nav-role" class="text-xs text-slate-400 uppercase tracking-wider font-medium">girlfriend</span>
-        <button id="nav-logout" type="button" class="button button-secondary px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium transition text-white">Logout</button>
+        <button id="nav-logout" class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium transition text-white">Logout</button>
       </div>
     </div>
   </nav>
 
-  <main class="page-main max-w-5xl mx-auto px-4 py-8">
+  <main class="max-w-5xl mx-auto px-4 py-8">
+    <!-- Profile Header -->
     <header class="mb-8">
-      <div id="user-dashboard-hero" class="user-dashboard-hero bg-gradient-to-br from-slate-900 via-slate-900/80 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
+      <div class="bg-gradient-to-br from-slate-900 via-slate-900/80 to-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-32 h-32 bg-pink-600/10 rounded-full blur-3xl -mt-12 -mr-12"></div>
-        <div class="user-hero-identity flex items-center gap-4">
+        <div class="flex items-center gap-4">
           <div class="relative flex-shrink-0">
             <div class="w-14 h-14 rounded-full bg-gradient-to-br from-pink-600 to-rose-500 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-pink-900/30 border-4 border-slate-800 relative overflow-hidden">
               <span id="header-profile-avatar">L</span>
             </div>
           </div>
-          <div class="user-hero-text">
-            <span class="section-eyebrow">YOUR SHARED SPACE</span>
+          <div>
             <div class="flex items-baseline gap-2 mb-1">
               <h1 id="user-welcome" class="text-2xl font-bold text-white tracking-tight">Welcome</h1>
               <span id="header-role-badge" class="px-3 py-1 rounded-full bg-pink-600/20 text-pink-400 text-xs font-semibold border border-pink-500/30 uppercase tracking-wider">Girlfriend</span>
             </div>
             <p id="user-profile-meta" class="text-slate-400 text-sm">Loading profile...</p>
-            <p class="user-hero-description">A place for the little things you want to remember, share and do together.</p>
           </div>
         </div>
-        <div class="user-hero-side">
+        <div class="flex gap-2">
           <span id="task-count-badge" class="px-3 py-1.5 rounded-full bg-pink-600/20 text-pink-400 text-xs font-semibold border border-pink-500/30">0 tasks</span>
-          <nav class="dashboard-shortcuts" aria-label="Your dashboard shortcuts">
-            <a href="#girlfriend-chat">Say hello</a>
-            <a href="#girlfriend-tasks">Your little wins</a>
-            <a href="#girlfriend-stories">Share a story</a>
-          </nav>
         </div>
       </div>
     </header>
 
-    <div id="girlfriend-dashboard-grid" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
       <!-- Left Column: Profile, Morning Message, Tasks -->
       <div class="lg:col-span-4 space-y-6">
 
-        <section id="girlfriend-profile" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden" aria-labelledby="girlfriend-profile-heading">
+        <!-- Profile Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl relative overflow-hidden">
           <div class="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-pink-500 via-rose-500 to-fuchsia-500"></div>
           <div class="flex justify-end mb-3">
             <button id="btn-edit-profile" type="button" class="text-sm font-medium text-pink-400 hover:text-pink-300">Edit profile</button>
@@ -85,58 +84,29 @@
               <p id="profile-edit-status" role="status" aria-live="polite" class="text-xs text-slate-400"></p>
             </div>
           </form>
-          <div class="profile-showcase">
-            <div class="profile-ambient profile-ambient-one" aria-hidden="true"></div>
-            <div class="profile-ambient profile-ambient-two" aria-hidden="true"></div>
-            <div class="profile-avatar-wrap" aria-label="Profile avatar illustration">
-              <div class="profile-avatar-ring"></div>
-              <div class="profile-avatar-core">
+          <div class="flex flex-col md:flex-row md:items-center gap-6 mb-6">
+            <div class="relative flex-shrink-0">
+              <div class="w-24 h-24 rounded-full bg-gradient-to-br from-pink-600 to-rose-500 flex items-center justify-center text-white font-bold text-3xl shadow-2xl shadow-pink-900/40 border-4 border-slate-800 relative overflow-hidden">
                 <span id="profile-avatar-fallback">L</span>
               </div>
-              <span class="profile-badge" aria-hidden="true">♥</span>
-              <span class="profile-particle particle-1" aria-hidden="true"></span>
-              <span class="profile-particle particle-2" aria-hidden="true"></span>
-              <span class="profile-particle particle-3" aria-hidden="true"></span>
-              <span class="profile-heart heart-1" aria-hidden="true">♥</span>
-              <span class="profile-heart heart-2" aria-hidden="true">♥</span>
-            </div>
-
-            <div class="profile-header-copy">
-              <p class="profile-kicker">My Favorite Person</p>
-              <div class="profile-name-row">
-                <h2 id="girlfriend-profile-heading" class="text-2xl font-bold text-white tracking-tight"><span id="display-username">—</span></h2>
-                <span id="display-role-badge" class="profile-role-pill">Girlfriend</span>
+              <div class="absolute -bottom-3 -right-3 bg-pink-600 text-white rounded-full w-8 h-8 flex items-center justify-center text-xs font-bold shadow-lg border-2 border-slate-900">
+                ✨
               </div>
-              <p id="user-profile-card-meta" class="profile-meta">Loading profile...</p>
-              <div class="profile-mini-meta">
-                <span><span class="mini-icon">🎂</span><span id="display-age">—</span></span>
-                <span><span class="mini-icon">📅</span><span id="display-joined">—</span></span>
+            </div>
+            <div>
+              <div class="flex items-baseline gap-2 mb-1">
+                <h2 id="display-username" class="text-2xl font-bold text-white tracking-tight">—</h2>
+                <span id="display-role-badge" class="px-3 py-1 rounded-full bg-pink-600/20 text-pink-400 text-xs font-semibold border border-pink-500/30 uppercase tracking-wider">Girlfriend</span>
+              </div>
+              <p id="user-profile-meta" class="text-slate-400 text-sm">Loading profile...</p>
+              <div class="flex items-center gap-4 mt-4 text-slate-400 text-sm">
+                <span class="flex items-center gap-2"><span class="w-4 h-4 bg-pink-500/20 text-pink-400 rounded-full flex items-center justify-center text-[10px]">🎂</span><span id="display-age">—</span></span>
+                <span class="flex items-center gap-2"><span class="w-4 h-4 bg-pink-500/20 text-pink-400 rounded-full flex items-center justify-center text-[10px]">📅</span><span id="display-joined">—</span></span>
               </div>
             </div>
           </div>
 
-          <div class="profile-highlights" aria-label="Favorite things and traits">
-            <span>Soft smile</span>
-            <span>Warm heart</span>
-            <span>Sunshine energy</span>
-            <span>Favorite person</span>
-          </div>
-
-          <div class="profile-quote-wrap">
-            <div class="profile-quote-card">
-              <p class="quote-label">Little things I adore</p>
-              <ul>
-                <li>Your laughter</li>
-                <li>Your calm presence</li>
-                <li>Our quiet little moments</li>
-              </ul>
-            </div>
-            <blockquote class="profile-love-quote">
-              “Every day with you feels like a soft sunrise—gentle, beautiful, and full of love.”
-            </blockquote>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 profile-details-grid">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div class="bg-slate-950/50 border border-slate-800 rounded-xl p-4">
               <div class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-2">Account name</div>
               <div class="text-sm text-slate-200 truncate" id="display-account-name">—</div>
@@ -164,28 +134,28 @@
             <h4 class="text-xs text-slate-500 uppercase tracking-wider font-medium mb-3">About</h4>
             <p id="display-bio" class="text-sm text-slate-300 italic">No bio added yet. Complete your profile to share more about yourself.</p>
           </div>
-        </section>
+        </div>
 
-        <section id="girlfriend-morning-message" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl" aria-labelledby="girlfriend-morning-heading">
-          <h3 id="girlfriend-morning-heading" class="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center gap-2 text-pink-400">
-            <span class="section-icon" aria-hidden="true">01</span> A little note
+        <!-- Morning Message -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <h3 class="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center gap-2 text-pink-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Morning Message
           </h3>
-          <p class="section-description">Send Alex a warm thought to start the day.</p>
           <div class="space-y-3">
-            <textarea id="morning-message" rows="3" aria-label="Morning message to Alex" placeholder="Good morning, my love... what's on your heart today?"
+            <textarea id="morning-message" rows="3" placeholder="Good morning, my love... what's on your heart today?"
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-none"></textarea>
-            <button id="btn-send-morning" type="button" class="w-full bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-pink-900/30">
+            <button id="btn-send-morning" class="w-full bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-pink-900/30">
               Send Morning Message
             </button>
             <p id="morning-status" class="text-xs text-slate-500 h-4"></p>
           </div>
-        </section>
+        </div>
 
-        <section id="girlfriend-tasks" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl" aria-labelledby="girlfriend-tasks-heading">
-          <h3 id="girlfriend-tasks-heading" class="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center gap-2 text-pink-400">
-            <span class="section-icon" aria-hidden="true">02</span> Your little wins
+        <!-- Tasks -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <h3 class="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center gap-2 text-pink-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Your Tasks
           </h3>
-          <p class="section-description">Small steps count. See what is on your list.</p>
           <div id="user-tasks-list" class="space-y-3">
             <p class="text-slate-400 text-sm">Loading your tasks...</p>
           </div>
@@ -195,17 +165,18 @@
             </div>
             <p class="text-slate-400 text-sm">No tasks assigned yet.</p>
           </div>
-        </section>
+        </div>
 
       </div>
 
       <!-- Right Column: Chat & Stories -->
       <div class="lg:col-span-8 space-y-6">
 
-        <section id="girlfriend-chat" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[600px]" aria-labelledby="girlfriend-chat-heading">
+        <!-- Chat -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[600px]">
           <div class="flex items-center justify-between mb-4">
-            <h3 id="girlfriend-chat-heading" class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2 text-pink-400">
-              <span class="section-icon" aria-hidden="true">03</span> A note away
+            <h3 class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2 text-pink-400">
+              <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Chat with Alex
             </h3>
             <div class="flex flex-col items-end gap-1">
               <span id="chat-status" class="text-xs text-slate-500">Connected</span>
@@ -217,21 +188,20 @@
             <div class="text-center py-4 text-slate-500 text-xs">No messages yet. Start the conversation!</div>
           </div>
           <div class="flex gap-2 border-t border-slate-800 pt-4">
-            <textarea id="chat-input" rows="1" aria-label="Message to Alex" placeholder="Type a message..."
+            <textarea id="chat-input" rows="1" placeholder="Type a message..."
               class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-none" data-rows="1"></textarea>
-            <button id="btn-send-chat" type="button" class="bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-pink-900/30 flex items-center justify-center">
+            <button id="btn-send-chat" class="bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-pink-900/30 flex items-center justify-center">
               Send
             </button>
           </div>
-        </section>
+        </div>
 
-        <section id="girlfriend-stories" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl" aria-labelledby="girlfriend-stories-heading">
-          <h3 id="girlfriend-stories-heading" class="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center gap-2 text-pink-400">
-            <span class="section-icon" aria-hidden="true">04</span> Stories, kept close
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <h3 class="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center gap-2 text-pink-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Share a private story with Alex
           </h3>
-          <p class="section-description">Only Alex can see the memories you share here.</p>
           <form id="story-form" class="space-y-3">
-            <label for="story-input" class="block text-xs text-slate-400">Write a moment you would like to keep between the two of you.</label>
+            <label for="story-input" class="block text-xs text-slate-400">Only Alex can see the stories you share here.</label>
             <textarea id="story-input" rows="4" maxlength="2000" required
               placeholder="Write a story or memory to share with Alex..."
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-y"></textarea>
@@ -243,7 +213,7 @@
               </button>
             </div>
           </form>
-        </section>
+        </div>
 
       </div>
     </div>
@@ -288,7 +258,6 @@
     const navLogout = document.getElementById("nav-logout");
     const welcomeEl = document.getElementById("user-welcome");
     const profileMeta = document.getElementById("user-profile-meta");
-    const profileCardMeta = document.getElementById("user-profile-card-meta");
     const displayUsername = document.getElementById("display-username");
     const displayAge = document.getElementById("display-age");
     const displayAccountName = document.getElementById("display-account-name");
@@ -453,7 +422,6 @@
 
       welcomeEl.textContent = `Welcome, ${data.username || "Love"}`;
       profileMeta.textContent = `${data.role} account`;
-      profileCardMeta.textContent = `${data.role} account`;
       displayUsername.textContent = data.username || "—";
       displayAge.textContent = data.age ? `${data.age} years old` : "—";
       displayAccountName.textContent = data.username || "—";
@@ -509,31 +477,76 @@
 
           tasks.forEach(({ id, data }) => {
             const done = data.status === "done";
-            const el = document.createElement("div");
-            el.className = `bg-slate-800 border border-slate-700 rounded-xl p-4 mb-3 flex items-center justify-between ${done ? "bg-slate-800/60" : ""}`;
-            el.innerHTML = `
-              <div class="flex-1">
-                <div class="font-semibold text-slate-200">${escapeHtml(data.title)}</div>
-                <div class="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                  <span>Assigned by:</span> <span class="text-slate-400">${data.createdBy ? "Alex" : "—"}</span>
-                  <span>•</span>
-                  <span class="capitalize ${done ? "text-pink-400" : "text-slate-400"}">${data.status}</span>
-                </div>
-              </div>
-              <button data-id="${id}" data-done="${done}"
-                class="px-4 py-2 rounded-lg text-sm font-medium transition ${done ? "bg-slate-700 hover:bg-slate-600 text-slate-300 border border-slate-600" : "bg-pink-600 hover:bg-pink-500 text-white shadow-lg shadow-pink-900/20"}">
-                ${done ? "Mark Pending" : "Mark Done"}
-              </button>
-            `;
-            tasksContainer.appendChild(el);
-          });
+            const taskDetails = document.createElement("details");
+            taskDetails.className = `bg-slate-800 border border-slate-700 rounded-xl p-4 ${done ? "bg-slate-800/60" : ""}`;
+            const taskSummary = document.createElement("summary");
+            taskSummary.className = "cursor-pointer list-none flex items-center justify-between gap-3";
+            const taskTitle = document.createElement("span");
+            taskTitle.className = "font-semibold text-slate-200 break-words";
+            taskTitle.textContent = data.title || "Untitled task";
+            const statusBadge = document.createElement("span");
+            statusBadge.className = `shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${done ? "bg-green-950 text-green-300" : "bg-slate-700 text-slate-300"}`;
+            statusBadge.textContent = done ? "Done" : "Open";
+            taskSummary.append(taskTitle, statusBadge);
+            taskDetails.appendChild(taskSummary);
 
-          tasksContainer.querySelectorAll('button[data-id]').forEach((btn) => {
-            btn.onclick = async () => {
-              const id = btn.dataset.id;
+            const taskContent = document.createElement("div");
+            taskContent.className = "mt-3 border-t border-slate-700 pt-3";
+            const assignedBy = document.createElement("p");
+            assignedBy.className = "text-xs text-slate-500";
+            assignedBy.textContent = `Assigned by: ${data.createdBy ? "Alex" : "—"}`;
+            taskContent.appendChild(assignedBy);
+
+            if (done) {
+              const noteLabel = document.createElement("p");
+              noteLabel.className = "mt-3 text-xs font-semibold uppercase tracking-wide text-pink-300";
+              noteLabel.textContent = "What I did";
+              const note = document.createElement("p");
+              note.className = "mt-1 whitespace-pre-wrap break-words text-sm text-slate-200";
+              note.textContent = data.completionNote || "No completion note was submitted.";
+              taskContent.append(noteLabel, note);
+            } else {
+              const completionForm = document.createElement("form");
+              completionForm.className = "mt-3 space-y-3";
+              const noteLabel = document.createElement("label");
+              noteLabel.className = "block text-xs font-medium text-slate-400";
+              noteLabel.textContent = "Tell Alex what you did";
+              const noteInput = document.createElement("textarea");
+              noteInput.required = true;
+              noteInput.maxLength = 2000;
+              noteInput.rows = 3;
+              noteInput.placeholder = "Write a little update about this task...";
+              noteInput.className = "mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-pink-500 resize-y";
+              noteLabel.appendChild(noteInput);
+              const formActions = document.createElement("div");
+              formActions.className = "flex flex-col sm:flex-row sm:items-center gap-3";
+              const completeButton = document.createElement("button");
+              completeButton.type = "submit";
+              completeButton.className = "w-fit rounded-lg bg-pink-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-500 disabled:cursor-not-allowed disabled:opacity-50";
+              completeButton.textContent = "Mark task done";
+              const completionStatus = document.createElement("p");
+              completionStatus.className = "text-xs text-slate-400";
+              completionStatus.setAttribute("role", "status");
+              completionStatus.setAttribute("aria-live", "polite");
+              formActions.append(completeButton, completionStatus);
+              completionForm.append(noteLabel, formActions);
+              taskContent.appendChild(completionForm);
+
+              completionForm.onsubmit = async (event) => {
+                event.preventDefault();
+                const completionNote = noteInput.value.trim();
+                if (!completionNote) {
+                  completionStatus.textContent = "Please write a short update before completing the task.";
+                  completionStatus.className = "text-xs text-red-400";
+                  noteInput.focus();
+                  return;
+                }
+
               const taskRef = doc(db, "tasks", id);
               const notificationRef = doc(collection(db, "notifications"));
-              btn.disabled = true;
+                completeButton.disabled = true;
+                completionStatus.textContent = "Saving your update...";
+                completionStatus.className = "text-xs text-slate-400";
               try {
                 await runTransaction(db, async (transaction) => {
                   const taskSnap = await transaction.get(taskRef);
@@ -541,31 +554,35 @@
 
                   const task = taskSnap.data();
                   if (task.assignedTo !== uid) throw new Error("You can only update your own tasks.");
-
-                  const completing = task.status !== "done";
+                  if (task.status === "done") throw new Error("This task has already been completed.");
                   transaction.update(taskRef, {
-                    status: completing ? "done" : "pending",
+                      status: "done",
+                      completionNote,
+                      completedAt: serverTimestamp(),
                     updatedAt: serverTimestamp()
                   });
-
-                  if (completing) {
                     transaction.set(notificationRef, {
                       type: "task_completed",
                       taskId: id,
                       taskTitle: task.title || "Untitled task",
+                      completionNote,
                       assignedTo: uid,
                       read: false,
                       createdAt: serverTimestamp()
                     });
-                  }
                 });
-              } catch (err) {
-                alert("Failed to update task: " + err.message);
-                console.error(err);
-              } finally {
-                btn.disabled = false;
-              }
-            };
+                  completionStatus.textContent = "Your update was sent to Alex.";
+                  completionStatus.className = "text-xs text-green-400";
+                } catch (err) {
+                  completionStatus.textContent = `Could not complete the task: ${err.message}`;
+                  completionStatus.className = "text-xs text-red-400";
+                  console.error("Failed to complete task:", err);
+                  completeButton.disabled = false;
+                }
+              };
+            }
+            taskDetails.appendChild(taskContent);
+            tasksContainer.appendChild(taskDetails);
           });
         },
         (err) => {
