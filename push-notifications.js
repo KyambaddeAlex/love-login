@@ -50,6 +50,7 @@ export function initializePushPrompt(userId, { enableButton, statusElement }) {
 
   const closePrompt = () => prompt.classList.add("hidden");
   const showPrompt = () => prompt.classList.remove("hidden");
+  closePrompt();
 
   const requestEnablement = async () => {
     enableButton.disabled = true;
@@ -71,6 +72,12 @@ export function initializePushPrompt(userId, { enableButton, statusElement }) {
         promptTitle.textContent = "Allow alerts in your browser";
         promptDescription.textContent = "Notifications are currently blocked for this site. Open your browser's site settings, change Notifications to Allow, then reload Love Login.";
         promptEnableButton.classList.add("hidden");
+        showPrompt();
+      } else if ("Notification" in window && Notification.permission === "granted") {
+        promptTitle.textContent = "Finish enabling message alerts";
+        promptDescription.textContent = `Your browser allows notifications, but setup could not be completed: ${error.message}`;
+        promptEnableButton.textContent = "Retry setup";
+        promptEnableButton.classList.remove("hidden");
         showPrompt();
       }
     } finally {
@@ -95,6 +102,7 @@ export function initializePushPrompt(userId, { enableButton, statusElement }) {
   }
 
   promptEnableButton.classList.remove("hidden");
+  promptEnableButton.textContent = "Enable alerts";
   if (Notification.permission === "granted") {
     void requestEnablement();
     return;
