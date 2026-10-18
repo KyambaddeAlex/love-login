@@ -27,11 +27,6 @@ let storyRecords = [];
 let notificationsInitialized = false;
 let editingTaskId = null;
 
-export function initAdmin(ui) {
-  if (auth.currentUser && auth.currentUser.uid !== ADMIN_UID) return;
-  renderAdminPanel(ui);
-}
-
 export function renderAdminPanel(ui) {
   if (usersUnsubscribe) usersUnsubscribe();
   if (tasksUnsubscribe) tasksUnsubscribe();
@@ -39,7 +34,6 @@ export function renderAdminPanel(ui) {
   if (storiesUnsubscribe) storiesUnsubscribe();
 
   ui.showSection("admin-panel");
-  ui.hideSection("user-dashboard");
   ui.hideSection("auth-view");
 
   const usersContainer = ui.getElement("admin-users-list");

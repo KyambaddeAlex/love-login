@@ -8,140 +8,163 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./love-login.css">
 </head>
-<body class="bg-slate-950 text-slate-200 min-h-screen selection:bg-pink-500 selection:text-white">
+<body class="app-shell bg-slate-950 text-slate-200 min-h-screen">
 
-  <nav class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded bg-pink-600 flex items-center justify-center text-white font-bold text-lg">L</div>
-        <div>
+  <nav class="site-nav border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50" aria-label="Main navigation">
+    <div class="site-nav-inner max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <a class="brand-lockup flex items-center gap-2" href="./index.html" aria-label="Love Login home">
+        <span class="brand-mark w-8 h-8 rounded bg-pink-600 flex items-center justify-center text-white font-bold text-lg" aria-hidden="true">L</span>
+        <span class="brand-copy">
           <span class="font-bold text-xl tracking-tight text-white">LOVE<span class="text-pink-500">LOGIN</span></span>
           <span class="hidden sm:block text-[10px] text-slate-500 tracking-[0.16em] uppercase">A little space for us</span>
-        </div>
-      </div>
-      <div id="nav-user" class="hidden items-center gap-4">
+        </span>
+      </a>
+      <div id="nav-user" class="hidden nav-user-actions items-center gap-4">
         <span id="nav-role" class="text-xs text-slate-400 uppercase tracking-wider"></span>
-        <button id="nav-logout" class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium transition">Logout</button>
+        <button id="nav-logout" type="button" class="button button-secondary px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm font-medium transition">Logout</button>
       </div>
     </div>
   </nav>
 
-  <main class="max-w-5xl mx-auto px-4 py-8">
-    <!-- Auth View -->
-    <section id="auth-view" class="max-w-md mx-auto">
-      <div class="auth-intro">
+  <main class="page-main max-w-5xl mx-auto px-4 py-8">
+    <section id="auth-view" class="auth-view max-w-md mx-auto" aria-labelledby="auth-heading">
+      <header class="auth-intro">
         <span class="auth-eyebrow">A private space for two</span>
-        <h1>Closer, even in the <span>little things.</span></h1>
+        <h1 id="auth-heading">Closer, even in the <span>little things.</span></h1>
         <p class="auth-intro-copy">A thoughtful place to share a story, keep up with the little things, and stay close throughout the day.</p>
-        <div class="auth-highlights">
-          <div class="auth-highlight">
+        <div class="auth-love-note">
+          <span class="auth-love-note-icon" aria-hidden="true">♥</span>
+          <span>
+            <strong>Keep choosing each other.</strong>
+            <small>One message, one memory, one day at a time.</small>
+          </span>
+        </div>
+        <ul class="auth-highlights">
+          <li class="auth-highlight">
             <span class="auth-highlight-mark" aria-hidden="true">01</span>
             <span>Share private stories and memories</span>
-          </div>
-          <div class="auth-highlight">
+          </li>
+          <li class="auth-highlight">
             <span class="auth-highlight-mark" aria-hidden="true">02</span>
             <span>Stay in touch with personal messages</span>
-          </div>
-          <div class="auth-highlight">
+          </li>
+          <li class="auth-highlight">
             <span class="auth-highlight-mark" aria-hidden="true">03</span>
             <span>Keep your shared tasks in one place</span>
-          </div>
-        </div>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-        <div class="text-center mb-8">
-          <h2 class="text-2xl font-bold text-white">Welcome back</h2>
+          </li>
+        </ul>
+      </header>
+      <section class="auth-card bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl" aria-labelledby="welcome-heading">
+        <header class="auth-card-heading text-center mb-8">
+          <h2 id="welcome-heading" class="text-2xl font-bold text-white">Welcome back</h2>
           <p class="text-slate-400 text-sm mt-2">Sign in to your account</p>
+        </header>
+
+        <div id="auth-toggle" class="auth-tabs flex mb-6" role="tablist" aria-label="Account access">
+          <button id="tab-login" type="button" role="tab" aria-selected="true" aria-controls="form-login" class="auth-tab is-active flex-1 py-3 rounded-t-xl border-b-2 border-pink-500 text-pink-400 font-semibold bg-slate-800/50">Login</button>
+          <button id="tab-signup" type="button" role="tab" aria-selected="false" aria-controls="form-signup" class="auth-tab flex-1 py-3 rounded-t-xl border-transparent text-slate-500 hover:text-slate-300">Sign up</button>
         </div>
 
-        <div id="auth-toggle" class="flex mb-6">
-          <button id="tab-login" class="flex-1 py-3 rounded-t-xl border-b-2 border-pink-500 text-pink-400 font-semibold bg-slate-800/50">Login</button>
-          <button id="tab-signup" class="flex-1 py-3 rounded-t-xl border-transparent text-slate-500 hover:text-slate-300">Sign up</button>
-        </div>
-
-        <!-- Login Form -->
-        <form id="form-login" class="space-y-4">
+        <form id="form-login" class="auth-form space-y-4" role="tabpanel" aria-labelledby="tab-login">
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Email</label>
-            <input id="login-email" type="email" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="you@example.com"/>
+            <label for="login-email" class="block text-xs font-medium text-slate-400 mb-1">Email</label>
+            <input id="login-email" name="email" type="email" autocomplete="email" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="you@example.com"/>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Password</label>
-            <input id="login-password" type="password" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="••••••••"/>
+            <label for="login-password" class="block text-xs font-medium text-slate-400 mb-1">Password</label>
+            <input id="login-password" name="password" type="password" autocomplete="current-password" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="••••••••"/>
           </div>
-          <button type="submit" id="btn-login" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Sign in</button>
-          <p class="text-center text-xs text-slate-500">Don't have an account? <button type="button" id="show-signup" class="text-pink-400 hover:underline font-medium">Sign up</button></p>
-          <p id="msg-login" class="text-xs text-red-400 h-4 hidden"></p>
+          <button type="submit" id="btn-login" class="button button-primary w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Sign in</button>
+          <p class="auth-switch text-center text-xs text-slate-500">Don't have an account? <button type="button" id="show-signup" class="text-pink-400 hover:underline font-medium">Sign up</button></p>
+          <p id="msg-login" class="form-message text-xs text-red-400 h-4 hidden" role="alert"></p>
         </form>
 
-        <!-- Signup Form -->
-        <form id="form-signup" class="space-y-4 hidden">
+        <form id="form-signup" class="auth-form space-y-4 hidden" role="tabpanel" aria-labelledby="tab-signup" hidden>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Username</label>
-            <input id="signup-username" type="text" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="Choose a username"/>
+            <label for="signup-username" class="block text-xs font-medium text-slate-400 mb-1">Username</label>
+            <input id="signup-username" name="username" type="text" autocomplete="nickname" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="Choose a username"/>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Age (optional)</label>
-            <input id="signup-age" type="number" min="1" max="120" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="e.g. 25"/>
+            <label for="signup-age" class="block text-xs font-medium text-slate-400 mb-1">Age (optional)</label>
+            <input id="signup-age" name="age" type="number" min="1" max="120" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="e.g. 25"/>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Email</label>
-            <input id="signup-email" type="email" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="you@example.com"/>
+            <label for="signup-email" class="block text-xs font-medium text-slate-400 mb-1">Email</label>
+            <input id="signup-email" name="email" type="email" autocomplete="email" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="you@example.com"/>
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Password</label>
-            <input id="signup-password" type="password" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="••••••••"/>
+            <label for="signup-password" class="block text-xs font-medium text-slate-400 mb-1">Password</label>
+            <input id="signup-password" name="password" type="password" autocomplete="new-password" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="••••••••"/>
           </div>
-          <button type="submit" id="btn-signup" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Create account</button>
-          <p class="text-center text-xs text-slate-500">Already have an account? <button type="button" id="show-login" class="text-pink-400 hover:underline font-medium">Sign in</button></p>
-          <p id="msg-signup" class="text-xs text-red-400 h-4 hidden"></p>
+          <button type="submit" id="btn-signup" class="button button-primary w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Create account</button>
+          <p class="auth-switch text-center text-xs text-slate-500">Already have an account? <button type="button" id="show-login" class="text-pink-400 hover:underline font-medium">Sign in</button></p>
+          <p id="msg-signup" class="form-message text-xs text-red-400 h-4 hidden" role="alert"></p>
         </form>
 
-        <p class="text-center text-xs text-slate-600 mt-6">Admin: Kyambadde Alex</p>
-      </div>
+        <p class="auth-footer text-center text-xs text-slate-600 mt-6">Admin: Kyambadde Alex</p>
+      </section>
     </section>
 
-    <!-- Admin Panel -->
-    <section id="admin-panel" class="hidden">
+    <section id="admin-panel" class="admin-panel hidden" aria-labelledby="admin-heading">
       <header class="mb-7">
-        <span class="section-eyebrow">Your overview</span>
-        <h1 class="mt-2 text-3xl font-bold tracking-tight text-slate-900">Admin dashboard</h1>
-        <p class="mt-2 text-sm text-slate-500">Manage accounts, tasks, stories and conversations from one place.</p>
+        <div class="admin-hero-copy">
+          <span class="section-eyebrow">THE LITTLE THINGS MATTER</span>
+          <h1 id="admin-heading" class="mt-2 text-3xl font-bold tracking-tight text-slate-900">Admin dashboard</h1>
+          <p class="mt-2 text-sm text-slate-500">A thoughtful home for the people, plans, stories and conversations you share.</p>
+          <nav class="dashboard-shortcuts" aria-label="Admin dashboard shortcuts">
+            <a href="#admin-accounts">Accounts</a>
+            <a href="#admin-task-creation">Create a task</a>
+            <a href="#admin-stories">Stories</a>
+            <a href="#admin-chat">Messages</a>
+          </nav>
+        </div>
+        <div class="admin-hero-art" aria-hidden="true">
+          <svg viewBox="0 0 180 180" fill="none">
+            <circle cx="90" cy="90" r="72" stroke="currentColor" stroke-opacity=".22"/>
+            <circle cx="90" cy="90" r="54" stroke="currentColor" stroke-opacity=".32"/>
+            <path d="M90 119s-38-22-38-49c0-18 24-25 38-7 14-18 38-11 38 7 0 27-38 49-38 49Z" stroke="currentColor" stroke-width="2"/>
+            <path d="M32 90h18m80 0h18M90 32v18m0 80v18" stroke="currentColor" stroke-opacity=".38"/>
+            <circle cx="90" cy="90" r="3" fill="currentColor"/>
+          </svg>
+          <span>LOVE, WELL MANAGED</span>
+        </div>
       </header>
-      <div class="flex flex-col lg:flex-row gap-6">
-        <div class="lg:w-1/3 space-y-6">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-pink-500"></span> Registered Accounts
+      <div class="admin-dashboard-grid grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <section id="admin-accounts" class="lg:col-span-4 space-y-6" aria-labelledby="admin-accounts-heading">
+          <article class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+            <h3 id="admin-accounts-heading" class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span class="section-icon" aria-hidden="true">01</span> The people
             </h3>
+            <p class="section-description">The people who make this little space yours.</p>
             <div id="admin-users-list" class="space-y-2">
               <p class="text-slate-400 text-sm">Loading registered accounts...</p>
-            </div>
-          </div>
+            </article>
+          </section>
         </div>
-        <div class="lg:w-2/3 space-y-6">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-            <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-pink-500"></span> Assign a Task
+        <div class="lg:col-span-8 space-y-6">
+          <section id="admin-task-creation" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl" aria-labelledby="admin-task-creation-heading">
+            <h3 id="admin-task-creation-heading" class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+              <span class="section-icon" aria-hidden="true">02</span> Plan a little something
             </h3>
+            <p class="section-description">Turn a good intention into a shared moment.</p>
             <form id="task-form" class="space-y-4">
               <div>
-                <label class="block text-xs font-medium text-slate-400 mb-1">Assign to user</label>
+                <label for="assign-user-select" class="block text-xs font-medium text-slate-400 mb-1">Assign to user</label>
                 <select id="assign-user-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition">
                   <option value="">Select a user</option>
                 </select>
               </div>
               <div>
-                <label class="block text-xs font-medium text-slate-400 mb-1">Task title</label>
+                <label for="task-title" class="block text-xs font-medium text-slate-400 mb-1">Task title</label>
                 <input id="task-title" type="text" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="e.g. Buy flowers"/>
               </div>
               <button type="submit" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Create Task</button>
             </form>
-          </div>
+          </section>
 
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <section id="admin-task-progress" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl" aria-labelledby="admin-task-progress-heading">
             <div class="flex items-center justify-between gap-3">
-              <h3 class="text-lg font-bold text-white">Task progress</h3>
+              <h3 id="admin-task-progress-heading" class="text-lg font-bold text-white flex items-center gap-3"><span class="section-icon" aria-hidden="true">03</span> Little wins</h3>
               <span id="admin-task-summary" class="text-xs text-slate-400">Loading tasks...</span>
             </div>
             <p id="admin-completion-notice" role="status" aria-live="polite" class="hidden mt-4 rounded-lg border border-green-700/60 bg-green-950/40 px-4 py-3 text-sm text-green-300"></p>
@@ -163,24 +186,23 @@
                 <p class="text-slate-500 text-sm">Loading tasks...</p>
               </div>
             </div>
-          </div>
+          </section>
 
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
+          <section id="admin-stories" class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl" aria-labelledby="admin-stories-heading">
             <div class="flex items-center justify-between gap-3 mb-4">
-              <h3 class="text-lg font-bold text-white">Girlfriend Stories</h3>
+              <h3 id="admin-stories-heading" class="text-lg font-bold text-white flex items-center gap-3"><span class="section-icon" aria-hidden="true">04</span> Stories, kept close</h3>
               <span id="admin-stories-count" class="text-xs text-slate-400">Loading...</span>
             </div>
             <div id="admin-stories-list" class="space-y-3">
               <p class="text-slate-500 text-sm">Loading stories...</p>
             </div>
-          </div>
+          </section>
         </div>
 
-        <!-- Admin Chat -->
-        <div class="lg:col-span-full mt-6 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[500px]">
+        <section id="admin-chat" class="lg:col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col h-[500px]" aria-labelledby="admin-chat-heading">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2 text-pink-400">
-              <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Chat with Girlfriends
+            <h3 id="admin-chat-heading" class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2 text-pink-400">
+              <span class="section-icon" aria-hidden="true">05</span> A note away
             </h3>
             <div class="flex flex-col items-end gap-1">
               <span id="admin-chat-status" class="text-xs text-slate-500">Loading...</span>
@@ -189,7 +211,7 @@
             </div>
           </div>
           <div class="mb-3">
-            <label class="block text-xs font-medium text-slate-400 mb-1">Select conversation</label>
+            <label for="admin-chat-user-select" class="block text-xs font-medium text-slate-400 mb-1">Select conversation</label>
             <select id="admin-chat-user-select" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition">
               <option value="">Select a girlfriend</option>
             </select>
@@ -198,30 +220,16 @@
             <div class="text-center py-4 text-slate-500 text-xs">Select a conversation to start chatting.</div>
           </div>
           <div class="flex gap-2 border-t border-slate-800 pt-4">
-            <textarea id="admin-chat-input" rows="1" placeholder="Type a reply..."
+            <textarea id="admin-chat-input" rows="1" aria-label="Message to selected girlfriend" placeholder="Type a reply..."
               class="flex-1 bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-none" data-rows="1"></textarea>
-            <button id="btn-admin-send-chat" disabled class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-pink-900/30 flex items-center justify-center text-opacity-50">
+            <button id="btn-admin-send-chat" type="button" disabled class="bg-slate-700 hover:bg-slate-600 text-white font-semibold py-3 px-6 rounded-xl transition shadow-lg shadow-pink-900/30 flex items-center justify-center text-opacity-50">
               Send
             </button>
           </div>
-        </div>
+        </section>
       </div>
     </section>
 
-    <!-- User Dashboard -->
-    <section id="user-dashboard" class="hidden">
-      <div class="mb-8">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 id="user-welcome" class="text-2xl font-bold text-white">Welcome</h2>
-            <p class="text-slate-400 text-sm">Here are your assigned tasks.</p>
-          </div>
-        </div>
-      </div>
-      <div id="user-tasks-list" class="space-y-3">
-        <p class="text-slate-400 text-sm">Loading your tasks...</p>
-      </div>
-    </section>
   </main>
 
   <div id="admin-message-notification" role="status" aria-live="polite"
@@ -249,11 +257,9 @@
   </div>
 
   <script type="module">
-    import { auth } from "./firebase-config.js";
-    import { db } from "./firebase-config.js";
-    import { register, login, logout, initAuth, currentUser, getRole, ADMIN_UID } from "./auth.js";
-    import { initAdmin, renderAdminPanel, destroyAdmin } from "./admin.js";
-    import { initUser, renderUserDashboard, destroyUser } from "./user.js";
+    import { auth, db } from "./firebase-config.js";
+    import { register, login, logout, initAuth, getRole, ADMIN_UID } from "./auth.js";
+    import { renderAdminPanel, destroyAdmin } from "./admin.js";
     import {
       collection, onSnapshot, doc, addDoc,
       serverTimestamp, getDocs, query, where, or
@@ -277,7 +283,6 @@
       if (show) {
         ui.showSection("auth-view");
         ui.hideSection("admin-panel");
-        ui.hideSection("user-dashboard");
         ui.getElement("nav-user").classList.add("hidden");
       } else {
         ui.hideSection("auth-view");
@@ -297,14 +302,18 @@
     function showLogin() {
       formLogin.classList.remove("hidden");
       formSignup.classList.add("hidden");
-      tabLogin.className = "flex-1 py-3 rounded-t-xl border-b-2 border-pink-500 text-pink-400 font-semibold bg-slate-800/50";
-      tabSignup.className = "flex-1 py-3 rounded-t-xl border-transparent text-slate-500 hover:text-slate-300";
+      formLogin.hidden = false;
+      formSignup.hidden = true;
+      tabLogin.setAttribute("aria-selected", "true");
+      tabSignup.setAttribute("aria-selected", "false");
     }
     function showSignup() {
       formSignup.classList.remove("hidden");
       formLogin.classList.add("hidden");
-      tabSignup.className = "flex-1 py-3 rounded-t-xl border-b-2 border-pink-500 text-pink-400 font-semibold bg-slate-800/50";
-      tabLogin.className = "flex-1 py-3 rounded-t-xl border-transparent text-slate-500 hover:text-slate-300";
+      formSignup.hidden = false;
+      formLogin.hidden = true;
+      tabSignup.setAttribute("aria-selected", "true");
+      tabLogin.setAttribute("aria-selected", "false");
     }
 
     ui.getElement("show-signup").onclick = showSignup;
@@ -539,7 +548,6 @@
       if (!user) {
         setAuthView(true);
         destroyAdmin();
-        destroyUser();
         if (adminChatUnsubscribe) adminChatUnsubscribe();
         if (adminIncomingMessagesUnsubscribe) adminIncomingMessagesUnsubscribe();
         adminIncomingMessagesUnsubscribe = null;
@@ -550,7 +558,6 @@
       ui.getElement("nav-role").textContent = role;
       if (role === "admin") {
         setAuthView(false);
-        destroyUser();
         renderAdminPanel(ui);
         initializePushPrompt(user.uid, {
           enableButton: enableAdminPushButton,
@@ -561,7 +568,6 @@
       } else {
         setAuthView(false);
         destroyAdmin();
-        destroyUser();
         window.location.replace("user-dashboard.html");
       }
     }
