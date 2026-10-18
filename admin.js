@@ -7,7 +7,10 @@ import {
   serverTimestamp,
   doc,
   updateDoc,
+  deleteDoc,
+  getDocs,
   query,
+  where,
   orderBy,
   limit,
   writeBatch
@@ -16,10 +19,13 @@ import {
 let usersUnsubscribe = null;
 let tasksUnsubscribe = null;
 let notificationsUnsubscribe = null;
+let storiesUnsubscribe = null;
 let userDirectory = new Map();
 let taskRecords = [];
 let notificationRecords = [];
+let storyRecords = [];
 let notificationsInitialized = false;
+let editingTaskId = null;
 
 export function initAdmin(ui) {
   if (auth.currentUser && auth.currentUser.uid !== ADMIN_UID) return;
@@ -30,6 +36,7 @@ export function renderAdminPanel(ui) {
   if (usersUnsubscribe) usersUnsubscribe();
   if (tasksUnsubscribe) tasksUnsubscribe();
   if (notificationsUnsubscribe) notificationsUnsubscribe();
+  if (storiesUnsubscribe) storiesUnsubscribe();
 
   ui.showSection("admin-panel");
   ui.hideSection("user-dashboard");
@@ -45,10 +52,14 @@ export function renderAdminPanel(ui) {
   const notificationCount = ui.getElement("admin-notification-count");
   const completionNotice = ui.getElement("admin-completion-notice");
   const markNotificationsRead = ui.getElement("admin-mark-notifications-read");
+  const storiesContainer = ui.getElement("admin-stories-list");
+  const storiesCount = ui.getElement("admin-stories-count");
   userDirectory = new Map();
   taskRecords = [];
   notificationRecords = [];
+  storyRecords = [];
   notificationsInitialized = false;
+  editingTaskId = null;
 
   usersContainer.innerHTML = '<p class="text-slate-400 text-sm">Loading registered accounts...</p>';
   userSelect.innerHTML = '<option value="">Loading users...</option>';
@@ -75,13 +86,23 @@ export function renderAdminPanel(ui) {
         const isAdmin = id === ADMIN_UID;
 
         const card = document.createElement("div");
-        card.className = "bg-slate-900 border border-slate-700 rounded-lg p-4 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2";
-        card.innerHTML = `
-          <div class="flex flex-col sm:flex-row items-center gap-2">
-            <span class="font-semibold text-slate-200">${escapeHtml(data.username || "Unnamed account")}</span>
-            ${isAdmin ? '<span class="inline-block mt-1 sm:mt-0 px-2 py-0.5 rounded text-[10px] font-bold bg-pink-600 text-white">ADMIN</span>' : ""}
-          </div>
-        `;
+        card.className = "bg-slate-900 border border-slate-700 rounded-lg p-4 mb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3";
+        const accountDetails = document.createElement("div");
+        accountDetails.className = "min-w-0";
+        const username = document.createElement("p");
+        username.className = "font-semibold text-slate-200 break-words";
+        username.textContent = data.username || "Unnamed account";
+        const email = document.createElement("p");
+        email.className = "text-xs text-slate-500 mt-1 break-all";
+        email.textContent = data.email || "";
+        accountDetails.append(username, email);
+        if (isAdmin) {
+          const adminBadge = document.createElement("span");
+          adminBadge.className = "inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-pink-600 text-white";
+          adminBadge.textContent = "ADMIN";
+          accountDetails.appendChild(adminBadge);
+        }
+        card.prepend(accountDetails);
         usersContainer.appendChild(card);
 
         if (!isAdmin) {
@@ -146,6 +167,23 @@ export function renderAdminPanel(ui) {
     }
   );
 
+  storiesUnsubscribe = onSnapshot(
+    collection(db, "stories"),
+    (snap) => {
+      storyRecords = snap.docs.map((storySnap) => ({
+        id: storySnap.id,
+        ...storySnap.data()
+      }));
+      storyRecords.sort((a, b) => timestampValue(b.createdAt) - timestampValue(a.createdAt));
+      renderStories(storiesContainer, storiesCount);
+    },
+    (err) => {
+      storiesContainer.innerHTML = '<p class="text-red-400 text-sm">Failed to load stories.</p>';
+      storiesCount.textContent = "Unavailable";
+      console.error("Failed to load stories:", err);
+    }
+  );
+
   markNotificationsRead.onclick = async () => {
     const unread = notificationRecords.filter((notification) => !notification.read);
     if (!unread.length) return;
@@ -192,10 +230,13 @@ export function destroyAdmin() {
   if (usersUnsubscribe) usersUnsubscribe();
   if (tasksUnsubscribe) tasksUnsubscribe();
   if (notificationsUnsubscribe) notificationsUnsubscribe();
+  if (storiesUnsubscribe) storiesUnsubscribe();
   usersUnsubscribe = null;
   tasksUnsubscribe = null;
   notificationsUnsubscribe = null;
+  storiesUnsubscribe = null;
   notificationsInitialized = false;
+  editingTaskId = null;
 }
 
 function renderTaskList(container, summary) {
@@ -211,8 +252,15 @@ function renderTaskList(container, summary) {
   taskRecords.forEach((task) => {
     const assignee = userDirectory.get(task.assignedTo);
     const row = document.createElement("div");
-    const status = task.status === "done" ? "Done" : "Pending";
-    row.className = "flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 py-3 last:border-0";
+    row.className = "border-b border-slate-800 py-3 last:border-0";
+    if (editingTaskId === task.id) {
+      renderTaskEditor(row, task);
+      container.appendChild(row);
+      return;
+    }
+
+    const rowContent = document.createElement("div");
+    rowContent.className = "flex flex-col sm:flex-row sm:items-center justify-between gap-3";
     const details = document.createElement("div");
     details.className = "min-w-0";
     const title = document.createElement("p");
@@ -224,9 +272,151 @@ function renderTaskList(container, summary) {
     details.append(title, assigneeText);
     const statusBadge = document.createElement("span");
     statusBadge.className = `inline-flex w-fit items-center rounded px-2.5 py-1 text-xs font-semibold ${task.status === "done" ? "bg-green-950 text-green-300" : "bg-slate-800 text-slate-300"}`;
-    statusBadge.textContent = status;
-    row.append(details, statusBadge);
+    statusBadge.textContent = task.status || "pending";
+    const actions = document.createElement("div");
+    actions.className = "flex items-center gap-3 shrink-0";
+    const editButton = document.createElement("button");
+    editButton.type = "button";
+    editButton.className = "text-xs font-medium text-pink-400 hover:text-pink-300";
+    editButton.textContent = "Edit";
+    editButton.onclick = () => {
+      editingTaskId = task.id;
+      renderTaskList(container, summary);
+    };
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.className = "text-xs font-medium text-red-400 hover:text-red-300";
+    deleteButton.textContent = "Delete";
+    deleteButton.setAttribute("aria-label", `Delete task ${task.title || "Untitled task"}`);
+    deleteButton.onclick = async () => {
+      const prompt = task.status === "done"
+        ? "Delete this completed task and its completion alerts?"
+        : "Delete this task?";
+      if (!window.confirm(prompt)) return;
+      deleteButton.disabled = true;
+      try {
+        await deleteTaskAndNotifications(task.id);
+      } catch (error) {
+        deleteButton.disabled = false;
+        alert("Could not delete task: " + error.message);
+        console.error(error);
+      }
+    };
+    actions.append(editButton, deleteButton);
+    rowContent.append(details, statusBadge, actions);
+    row.appendChild(rowContent);
     container.appendChild(row);
+  });
+}
+
+function renderTaskEditor(row, task) {
+  const form = document.createElement("form");
+  form.className = "grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(0,0.7fr)_auto] gap-2 items-end";
+
+  const titleLabel = document.createElement("label");
+  titleLabel.className = "block text-xs text-slate-400";
+  titleLabel.textContent = "Task title";
+  const titleInput = document.createElement("input");
+  titleInput.required = true;
+  titleInput.maxLength = 160;
+  titleInput.value = task.title || "";
+  titleInput.className = "mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-pink-500";
+  titleLabel.appendChild(titleInput);
+
+  const assigneeLabel = document.createElement("label");
+  assigneeLabel.className = "block text-xs text-slate-400";
+  assigneeLabel.textContent = "Assigned to";
+  const assigneeSelect = document.createElement("select");
+  assigneeSelect.className = "mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-pink-500";
+  userDirectory.forEach((user, uid) => {
+    if (uid === ADMIN_UID) return;
+    const option = document.createElement("option");
+    option.value = uid;
+    option.textContent = user.username || "Unnamed account";
+    assigneeSelect.appendChild(option);
+  });
+  if (task.assignedTo && !userDirectory.has(task.assignedTo)) {
+    const option = document.createElement("option");
+    option.value = task.assignedTo;
+    option.textContent = "Current assignee";
+    assigneeSelect.appendChild(option);
+  }
+  assigneeSelect.value = task.assignedTo || "";
+  assigneeLabel.appendChild(assigneeSelect);
+
+  const actions = document.createElement("div");
+  actions.className = "flex items-center gap-3 pb-1";
+  const saveButton = document.createElement("button");
+  saveButton.type = "submit";
+  saveButton.className = "text-xs font-semibold text-pink-400 hover:text-pink-300";
+  saveButton.textContent = "Save";
+  const cancelButton = document.createElement("button");
+  cancelButton.type = "button";
+  cancelButton.className = "text-xs text-slate-400 hover:text-white";
+  cancelButton.textContent = "Cancel";
+  cancelButton.onclick = () => {
+    editingTaskId = null;
+    renderTaskList(row.parentElement, document.getElementById("admin-task-summary"));
+  };
+  actions.append(saveButton, cancelButton);
+  form.append(titleLabel, assigneeLabel, actions);
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    const title = titleInput.value.trim();
+    const assignedTo = assigneeSelect.value;
+    if (!title || !assignedTo) return;
+    saveButton.disabled = true;
+    try {
+      await updateDoc(doc(db, "tasks", task.id), {
+        title,
+        assignedTo,
+        updatedAt: serverTimestamp()
+      });
+      editingTaskId = null;
+    } catch (error) {
+      saveButton.disabled = false;
+      alert("Could not update task: " + error.message);
+      console.error(error);
+    }
+  };
+  row.appendChild(form);
+}
+
+async function deleteTaskAndNotifications(taskId) {
+  const notifications = await getDocs(query(
+    collection(db, "notifications"),
+    where("taskId", "==", taskId)
+  ));
+  const notificationDocs = notifications.docs;
+  for (let offset = 0; offset < notificationDocs.length; offset += 450) {
+    const batch = writeBatch(db);
+    notificationDocs.slice(offset, offset + 450).forEach((notification) => {
+      batch.delete(notification.ref);
+    });
+    await batch.commit();
+  }
+  await deleteDoc(doc(db, "tasks", taskId));
+}
+
+function renderStories(container, count) {
+  count.textContent = `${storyRecords.length} ${storyRecords.length === 1 ? "story" : "stories"}`;
+  container.innerHTML = "";
+  if (!storyRecords.length) {
+    container.innerHTML = '<p class="text-slate-500 text-sm">No stories shared yet.</p>';
+    return;
+  }
+
+  storyRecords.forEach((story) => {
+    const item = document.createElement("article");
+    item.className = "border-b border-slate-800 py-3 last:border-0";
+    const content = document.createElement("p");
+    content.className = "text-sm text-slate-200 whitespace-pre-wrap break-words";
+    content.textContent = story.content || "";
+    const byline = document.createElement("p");
+    byline.className = "mt-2 text-xs text-slate-500";
+    byline.textContent = `${story.authorName || "Girlfriend"} · ${timestampLabel(story.createdAt)}`;
+    item.append(content, byline);
+    container.appendChild(item);
   });
 }
 

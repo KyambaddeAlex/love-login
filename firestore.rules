@@ -19,7 +19,7 @@ service cloud.firestore {
       allow update: if request.auth != null && (isAdmin() || (
         request.auth.uid == userId &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["username", "age", "bio", "photoURL"])
+          .hasOnly(["username", "age", "bio"])
       )
       );
       allow delete: if request.auth != null && (
