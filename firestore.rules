@@ -27,6 +27,18 @@ service cloud.firestore {
       );
     }
 
+    // Each account can manage only its own registered push devices.
+    match /pushTokens/{userId}/devices/{deviceId} {
+      allow read, delete: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null &&
+        request.auth.uid == userId &&
+        request.resource.data.keys().hasOnly(["token", "updatedAt"]) &&
+        request.resource.data.token is string &&
+        request.resource.data.token.size() > 0 &&
+        request.resource.data.token.size() <= 4096 &&
+        request.resource.data.updatedAt == request.time;
+    }
+
     // Tasks collection: write/delete strictly admin.
     match /tasks/{taskId} {
       allow read: if request.auth != null && (
@@ -82,17 +94,19 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Stories collection: read for all authenticated; write for author/admin.
+    // Girlfriends can submit their own stories; only the admin can read them.
     match /stories/{storyId} {
-      allow read: if request.auth != null;
+      allow read: if isAdmin();
       allow create: if request.auth != null &&
-        request.resource.data.authorId == request.auth.uid;
-      allow update: if request.auth != null && (
-        isAdmin() || request.auth.uid == resource.data.authorId
-      );
-      allow delete: if request.auth != null && (
-        isAdmin() || request.auth.uid == resource.data.authorId
-      );
+        request.auth.uid != "cRsPXPZrpxQAwAvA7D6Jd9uU9ca2" &&
+        request.resource.data.keys().hasOnly(["content", "authorId", "authorName", "createdAt"]) &&
+        request.resource.data.authorId == request.auth.uid &&
+        request.resource.data.content is string &&
+        request.resource.data.content.size() > 0 &&
+        request.resource.data.content.size() <= 2000 &&
+        request.resource.data.authorName is string &&
+        request.resource.data.createdAt == request.time;
+      allow update, delete: if isAdmin();
     }
   }
 }

@@ -15,3 +15,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const PUSH_CONFIG = {
+  vapidKey: "BBGcls99PanykGxAW6Qrs1D2u3gSIIReAUNhMTkIvhOOcu94L4vhkJc_xIgW-vKlvI9XiVsb89DlVq0LVRRJ4HE",
+  workerUrl: "https://love-login-push.kyambaddealex55.workers.dev"
+};

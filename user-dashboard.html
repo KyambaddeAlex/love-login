@@ -175,7 +175,11 @@
             <h3 class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2 text-pink-400">
               <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Chat with Alex
             </h3>
-            <span id="chat-status" class="text-xs text-slate-500">Connected</span>
+            <div class="flex flex-col items-end gap-1">
+              <span id="chat-status" class="text-xs text-slate-500">Connected</span>
+              <button id="btn-enable-user-push" type="button" class="text-xs text-pink-400 hover:text-pink-300">Enable message alerts</button>
+              <span id="user-push-status" role="status" aria-live="polite" class="text-xs text-slate-500"></span>
+            </div>
           </div>
           <div id="chat-messages" class="flex-1 overflow-y-auto space-y-3 pr-2 mb-4 scroll-smooth">
             <div class="text-center py-4 text-slate-500 text-xs">No messages yet. Start the conversation!</div>
@@ -189,28 +193,34 @@
           </div>
         </div>
 
-        <!-- Love Stories -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2 text-pink-400">
-              <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Our Love Stories
-            </h3>
-          </div>
-          <div class="space-y-4">
-            <textarea id="story-input" rows="2" placeholder="Write a story about us..."
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-none"></textarea>
-            <button id="btn-add-story" class="w-full bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 text-white font-semibold py-3 rounded-xl transition shadow-lg shadow-pink-900/30">
-              Share Story
-            </button>
-            <div id="stories-list" class="space-y-3">
-              <p class="text-slate-400 text-sm">No stories yet. Share your first memory!</p>
+          <h3 class="text-sm font-semibold text-white uppercase tracking-wider mb-4 flex items-center gap-2 text-pink-400">
+            <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Share a private story with Alex
+          </h3>
+          <form id="story-form" class="space-y-3">
+            <label for="story-input" class="block text-xs text-slate-400">Only Alex can see the stories you share here.</label>
+            <textarea id="story-input" rows="4" maxlength="2000" required
+              placeholder="Write a story or memory to share with Alex..."
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-y"></textarea>
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p id="story-status" role="status" aria-live="polite" class="text-xs text-slate-400"></p>
+              <button id="btn-add-story" type="submit"
+                class="bg-gradient-to-r from-pink-600 to-rose-500 hover:from-pink-500 hover:to-rose-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-2.5 px-5 rounded-lg transition">
+                Share with Alex
+              </button>
             </div>
-          </div>
+          </form>
         </div>
 
       </div>
     </div>
   </main>
+
+  <div id="user-message-notification" role="status" aria-live="polite"
+    class="hidden fixed bottom-5 right-5 z-[100] max-w-sm rounded-xl border border-pink-500/50 bg-slate-900 p-4 shadow-2xl shadow-pink-950/40">
+    <p id="user-message-notification-title" class="font-semibold text-white"></p>
+    <p id="user-message-notification-body" class="mt-1 text-sm text-slate-300 break-words"></p>
+  </div>
 
   <script type="module">
     import { auth, db } from "./firebase-config.js";
@@ -220,6 +230,7 @@
       serverTimestamp, addDoc, runTransaction
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
     import { ADMIN_UID, getRole } from "./auth.js";
+    import { enablePushNotifications, sendPushNotification } from "./push-notifications.js";
 
     // DOM refs
     const navRole = document.getElementById("nav-role");
@@ -248,10 +259,15 @@
     const chatInput = document.getElementById("chat-input");
     const btnSendChat = document.getElementById("btn-send-chat");
     const chatStatus = document.getElementById("chat-status");
-
+    const enableUserPushButton = document.getElementById("btn-enable-user-push");
+    const userPushStatus = document.getElementById("user-push-status");
+    const userMessageNotification = document.getElementById("user-message-notification");
+    const userMessageNotificationTitle = document.getElementById("user-message-notification-title");
+    const userMessageNotificationBody = document.getElementById("user-message-notification-body");
+    const storyForm = document.getElementById("story-form");
     const storyInput = document.getElementById("story-input");
+    const storyStatus = document.getElementById("story-status");
     const btnAddStory = document.getElementById("btn-add-story");
-    const storiesList = document.getElementById("stories-list");
 
     const tasksContainer = document.getElementById("user-tasks-list");
     const emptyTasks = document.getElementById("empty-tasks");
@@ -260,7 +276,20 @@
     const adminUid = ADMIN_UID;
     let tasksUnsubscribe = null;
     let chatUnsubscribe = null;
-    let storiesUnsubscribe = null;
+    let chatMessagesInitialized = false;
+    let userNotificationTimeout = null;
+
+    function notifyUserOfMessage(messageText) {
+      const title = "New message from Alex";
+      const body = messageText.length > 180 ? `${messageText.slice(0, 177)}...` : messageText;
+      userMessageNotificationTitle.textContent = title;
+      userMessageNotificationBody.textContent = body;
+      userMessageNotification.classList.remove("hidden");
+      clearTimeout(userNotificationTimeout);
+      userNotificationTimeout = setTimeout(() => {
+        userMessageNotification.classList.add("hidden");
+      }, 7000);
+    }
 
     // Auto-expand textarea
     function autoExpand(el) {
@@ -268,6 +297,35 @@
       el.style.height = el.scrollHeight + "px";
     }
     chatInput.addEventListener("input", () => autoExpand(chatInput));
+
+    enableUserPushButton.onclick = async () => {
+      enableUserPushButton.disabled = true;
+      userPushStatus.textContent = "Enabling notifications...";
+      try {
+        await enablePushNotifications(auth.currentUser.uid);
+        userPushStatus.textContent = "Message alerts enabled on this device.";
+        userPushStatus.className = "text-xs text-green-400";
+      } catch (error) {
+        userPushStatus.textContent = error.message;
+        userPushStatus.className = "text-xs text-red-400";
+      } finally {
+        enableUserPushButton.disabled = false;
+      }
+    };
+
+    async function sendMessagePush(messageId) {
+      try {
+        const result = await sendPushNotification(messageId);
+        userPushStatus.textContent = result.sent
+          ? "Message sent; push alert queued for Alex."
+          : "Message sent; Alex has not enabled push alerts.";
+        userPushStatus.className = result.sent ? "text-xs text-green-400" : "text-xs text-slate-400";
+      } catch (error) {
+        console.error("Message sent, but push delivery failed:", error);
+        userPushStatus.textContent = `Message sent, but push alert failed: ${error.message}`;
+        userPushStatus.className = "text-xs text-red-400";
+      }
+    }
 
     profileEditButton.onclick = () => {
       profileNameInput.value = currentUserData?.username || "";
@@ -343,7 +401,6 @@
 
       loadTasks(user.uid);
       loadChat(user.uid, adminUid);
-      loadStories();
     });
 
     function renderProfile(data) {
@@ -495,6 +552,18 @@
           )
         ),
         (snap) => {
+          if (!chatMessagesInitialized) {
+            chatMessagesInitialized = true;
+          } else {
+            snap.docChanges().forEach((change) => {
+              if (change.type !== "added") return;
+              const message = change.doc.data();
+              if (message.senderId === adminUid && message.receiverId === uid) {
+                notifyUserOfMessage(message.text || "New message");
+              }
+            });
+          }
+
           const msgs = [];
           snap.forEach((d) => {
             const data = d.data();
@@ -537,14 +606,16 @@
       const text = chatInput.value.trim();
       if (!text || !adminUid) return;
       try {
-        await addDoc(collection(db, "messages"), {
+        const messageRef = await addDoc(collection(db, "messages"), {
           senderId: auth.currentUser.uid,
           receiverId: adminUid,
           text,
+          senderName: currentUserData?.username || auth.currentUser.email.split("@")[0],
           timestamp: serverTimestamp()
         });
         chatInput.value = "";
         chatInput.style.height = "auto";
+        await sendMessagePush(messageRef.id);
       } catch (err) {
         alert("Failed to send: " + err.message);
       }
@@ -566,16 +637,18 @@
         return;
       }
       try {
-        await addDoc(collection(db, "messages"), {
+        const messageRef = await addDoc(collection(db, "messages"), {
           senderId: auth.currentUser.uid,
           receiverId: adminUid,
           text: `[Morning] ${text}`,
+          senderName: currentUserData?.username || auth.currentUser.email.split("@")[0],
           timestamp: serverTimestamp(),
           type: "morning"
         });
         morningMessage.value = "";
         morningStatus.textContent = "Morning message sent!";
         morningStatus.className = "text-xs text-green-400";
+        await sendMessagePush(messageRef.id);
         setTimeout(() => { morningStatus.textContent = ""; }, 3000);
       } catch (err) {
         morningStatus.textContent = "Failed: " + err.message;
@@ -583,45 +656,19 @@
       }
     };
 
-    /* ---------- Stories ---------- */
-    function loadStories() {
-      storiesUnsubscribe = onSnapshot(
-        collection(db, "stories"),
-        (snap) => {
-          storiesList.innerHTML = "";
-          if (snap.empty) {
-            storiesList.innerHTML = '<p class="text-slate-400 text-sm">No stories yet. Share your first memory!</p>';
-            return;
-          }
-          const stories = [];
-          snap.forEach((d) => {
-            stories.push({ id: d.id, data: d.data() });
-          });
-          stories.sort((a, b) => {
-            const da = a.data.createdAt ? new Date(a.data.createdAt).getTime() : 0;
-            const db_ = b.data.createdAt ? new Date(b.data.createdAt).getTime() : 0;
-            return db_ - da;
-          });
-
-          stories.forEach(({ id, data }) => {
-            const el = document.createElement("div");
-            el.className = "bg-slate-800/50 border border-slate-700 rounded-xl p-4";
-            el.innerHTML = `
-              <div class="text-sm text-slate-200 whitespace-pre-wrap">${escapeHtml(data.content)}</div>
-              <div class="flex items-center gap-2 mt-2">
-                <span class="text-[10px] text-slate-500 uppercase tracking-wider">${data.authorName || "Someone"}</span>
-                <span class="text-[10px] text-slate-600">${formatTime(data.createdAt)}</span>
-              </div>
-            `;
-            storiesList.appendChild(el);
-          });
-        }
-      );
-    }
-
-    btnAddStory.onclick = async () => {
+    storyForm.onsubmit = async (event) => {
+      event.preventDefault();
       const content = storyInput.value.trim();
-      if (!content) return;
+      if (!content) {
+        storyStatus.textContent = "Write a story before sharing.";
+        storyStatus.className = "text-xs text-red-400";
+        storyInput.focus();
+        return;
+      }
+
+      btnAddStory.disabled = true;
+      storyStatus.textContent = "Sharing privately with Alex...";
+      storyStatus.className = "text-xs text-slate-400";
       try {
         await addDoc(collection(db, "stories"), {
           content,
@@ -630,8 +677,14 @@
           createdAt: serverTimestamp()
         });
         storyInput.value = "";
-      } catch (err) {
-        alert("Failed: " + err.message);
+        storyStatus.textContent = "Your story was shared with Alex.";
+        storyStatus.className = "text-xs text-green-400";
+      } catch (error) {
+        console.error("Failed to share story:", error);
+        storyStatus.textContent = `Could not share your story: ${error.message}`;
+        storyStatus.className = "text-xs text-red-400";
+      } finally {
+        btnAddStory.disabled = false;
       }
     };
 

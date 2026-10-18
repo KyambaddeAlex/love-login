@@ -157,7 +157,11 @@
             <h3 class="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-2 text-pink-400">
               <span class="w-1.5 h-1.5 rounded-full bg-pink-500"></span> Chat with Girlfriends
             </h3>
-            <span id="admin-chat-status" class="text-xs text-slate-500">Loading...</span>
+            <div class="flex flex-col items-end gap-1">
+              <span id="admin-chat-status" class="text-xs text-slate-500">Loading...</span>
+              <button id="btn-enable-admin-push" type="button" class="text-xs text-pink-400 hover:text-pink-300">Enable message alerts</button>
+              <span id="admin-push-status" role="status" aria-live="polite" class="text-xs text-slate-500"></span>
+            </div>
           </div>
           <div class="mb-3">
             <label class="block text-xs font-medium text-slate-400 mb-1">Select conversation</label>
@@ -195,6 +199,12 @@
     </section>
   </main>
 
+  <div id="admin-message-notification" role="status" aria-live="polite"
+    class="hidden fixed bottom-5 right-5 z-[100] max-w-sm rounded-xl border border-pink-500/50 bg-slate-900 p-4 shadow-2xl shadow-pink-950/40">
+    <p id="admin-message-notification-title" class="font-semibold text-white"></p>
+    <p id="admin-message-notification-body" class="mt-1 text-sm text-slate-300 break-words"></p>
+  </div>
+
   <script type="module">
     import { auth } from "./firebase-config.js";
     import { db } from "./firebase-config.js";
@@ -205,6 +215,7 @@
       collection, onSnapshot, doc, addDoc,
       serverTimestamp, getDocs, query, where, or
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    import { enablePushNotifications, sendPushNotification } from "./push-notifications.js";
 
     const ui = {
       getElement(id) { return document.getElementById(id); },
@@ -292,14 +303,74 @@
     const adminChatInput = document.getElementById("admin-chat-input");
     const btnAdminSendChat = document.getElementById("btn-admin-send-chat");
     const adminChatStatus = document.getElementById("admin-chat-status");
+    const enableAdminPushButton = document.getElementById("btn-enable-admin-push");
+    const adminPushStatus = document.getElementById("admin-push-status");
+    const adminMessageNotification = document.getElementById("admin-message-notification");
+    const adminMessageNotificationTitle = document.getElementById("admin-message-notification-title");
+    const adminMessageNotificationBody = document.getElementById("admin-message-notification-body");
 
     let selectedGirlfriendUid = null;
     let adminChatUnsubscribe = null;
+    let adminIncomingMessagesUnsubscribe = null;
+    let adminIncomingMessagesInitialized = false;
+    let adminNotificationTimeout = null;
 
     adminChatInput.addEventListener("input", () => {
       adminChatInput.style.height = "auto";
       adminChatInput.style.height = adminChatInput.scrollHeight + "px";
     });
+
+    enableAdminPushButton.onclick = async () => {
+      enableAdminPushButton.disabled = true;
+      adminPushStatus.textContent = "Enabling notifications...";
+      try {
+        await enablePushNotifications(auth.currentUser.uid);
+        adminPushStatus.textContent = "Message alerts enabled on this device.";
+        adminPushStatus.className = "text-xs text-green-400";
+      } catch (error) {
+        adminPushStatus.textContent = error.message;
+        adminPushStatus.className = "text-xs text-red-400";
+      } finally {
+        enableAdminPushButton.disabled = false;
+      }
+    };
+
+    function notifyAdminOfMessage(senderName, messageText) {
+      const title = `${senderName} sent you a message`;
+      const body = messageText.length > 180 ? `${messageText.slice(0, 177)}...` : messageText;
+      adminMessageNotificationTitle.textContent = title;
+      adminMessageNotificationBody.textContent = body;
+      adminMessageNotification.classList.remove("hidden");
+      clearTimeout(adminNotificationTimeout);
+      adminNotificationTimeout = setTimeout(() => {
+        adminMessageNotification.classList.add("hidden");
+      }, 7000);
+    }
+
+    function listenForAdminMessages() {
+      if (adminIncomingMessagesUnsubscribe) adminIncomingMessagesUnsubscribe();
+      adminIncomingMessagesInitialized = false;
+      adminIncomingMessagesUnsubscribe = onSnapshot(
+        query(collection(db, "messages"), where("receiverId", "==", ADMIN_UID)),
+        (snap) => {
+          if (!adminIncomingMessagesInitialized) {
+            adminIncomingMessagesInitialized = true;
+            return;
+          }
+          snap.docChanges().forEach((change) => {
+            if (change.type !== "added") return;
+            const message = change.doc.data();
+            if (message.senderId === ADMIN_UID) return;
+            notifyAdminOfMessage(message.senderName || "A girlfriend", message.text || "New message");
+          });
+        },
+        (error) => {
+          adminChatStatus.textContent = "Message notifications unavailable";
+          adminChatStatus.className = "text-xs text-red-400";
+          console.error("Failed to listen for incoming messages:", error);
+        }
+      );
+    }
 
     // Load girlfriends into dropdown
     async function loadGirlfriends() {
@@ -391,7 +462,7 @@
       if (!text || !selectedGirlfriendUid) return;
       try {
         const me = auth.currentUser;
-        await addDoc(collection(db, "messages"), {
+        const messageRef = await addDoc(collection(db, "messages"), {
           senderId: me.uid,
           receiverId: selectedGirlfriendUid,
           text,
@@ -400,6 +471,17 @@
         });
         adminChatInput.value = "";
         adminChatInput.style.height = "auto";
+        try {
+          const result = await sendPushNotification(messageRef.id);
+          adminPushStatus.textContent = result.sent
+            ? `Message sent; push alert queued for ${result.sent} device${result.sent === 1 ? "" : "s"}.`
+            : "Message sent; this girlfriend has not enabled push alerts.";
+          adminPushStatus.className = result.sent ? "text-xs text-green-400" : "text-xs text-slate-400";
+        } catch (pushError) {
+          console.error("Message sent, but push delivery failed:", pushError);
+          adminPushStatus.textContent = `Message sent, but push alert failed: ${pushError.message}`;
+          adminPushStatus.className = "text-xs text-red-400";
+        }
       } catch (err) {
         alert("Failed to send: " + err.message);
       }
@@ -431,6 +513,9 @@
         destroyAdmin();
         destroyUser();
         if (adminChatUnsubscribe) adminChatUnsubscribe();
+        if (adminIncomingMessagesUnsubscribe) adminIncomingMessagesUnsubscribe();
+        adminIncomingMessagesUnsubscribe = null;
+        adminIncomingMessagesInitialized = false;
         return;
       }
       const role = getRole(user.uid);
@@ -440,6 +525,7 @@
         destroyUser();
         renderAdminPanel(ui);
         loadGirlfriends();
+        listenForAdminMessages();
       } else {
         setAuthView(false);
         destroyAdmin();
