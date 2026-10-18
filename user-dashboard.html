@@ -180,7 +180,7 @@
             </h3>
             <div class="flex flex-col items-end gap-1">
               <span id="chat-status" class="text-xs text-slate-500">Connected</span>
-              <button id="btn-enable-user-push" type="button" class="text-xs text-pink-400 hover:text-pink-300">Enable message alerts</button>
+              <button id="btn-enable-user-push" type="button" class="text-xs text-pink-400 hover:text-pink-300">Enable alerts on this device</button>
               <span id="user-push-status" role="status" aria-live="polite" class="text-xs text-slate-500"></span>
             </div>
           </div>
@@ -323,11 +323,11 @@
       try {
         const result = await sendPushNotification(messageId);
         userPushStatus.textContent = result.sent
-          ? "Message sent; push alert queued for Alex."
+          ? "Message sent; alert queued for Alex."
           : result.skippedSenderDevices
-            ? "Message sent; this sender device was skipped to avoid notifying the girlfriend."
-          : "Message sent; Alex has not enabled push alerts.";
-        userPushStatus.className = result.sent ? "text-xs text-green-400" : "text-xs text-slate-400";
+            ? "Message sent, but no alert was sent because all devices registered for Alex are also linked to your account. For privacy, sender devices are excluded. Ask Alex to enable alerts on a different device."
+          : "Message sent, but Alex has no notification device registered yet. Ask Alex to tap Enable alerts on the device where he wants to receive alerts.";
+        userPushStatus.className = result.sent ? "text-xs text-green-400" : "text-xs text-amber-300";
       } catch (error) {
         console.error("Message sent, but push delivery failed:", error);
         userPushStatus.textContent = `Message sent, but push alert failed: ${error.message}`;
