@@ -225,6 +225,24 @@
     <p id="user-message-notification-body" class="mt-1 text-sm text-slate-300 break-words"></p>
   </div>
 
+  <div id="notification-prompt" class="notification-prompt-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="notification-prompt-title" aria-describedby="notification-prompt-description">
+    <section class="notification-prompt-card">
+      <div class="notification-prompt-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+        </svg>
+      </div>
+      <span class="notification-prompt-eyebrow">A little heads-up</span>
+      <h2 id="notification-prompt-title">Stay in the loop</h2>
+      <p id="notification-prompt-description"></p>
+      <div class="notification-prompt-actions">
+        <button id="notification-prompt-dismiss" type="button" class="notification-prompt-secondary">Not now</button>
+        <button id="notification-prompt-enable" type="button" class="notification-prompt-primary">Enable alerts</button>
+      </div>
+      <p class="notification-prompt-note">You can change your notification choice in your browser settings at any time.</p>
+    </section>
+  </div>
+
   <script type="module">
     import { auth, db } from "./firebase-config.js";
     import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
@@ -233,7 +251,7 @@
       serverTimestamp, addDoc, runTransaction
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
     import { ADMIN_UID, getRole } from "./auth.js";
-    import { enablePushNotifications, sendPushNotification } from "./push-notifications.js";
+    import { initializePushPrompt, sendPushNotification } from "./push-notifications.js";
 
     // DOM refs
     const navRole = document.getElementById("nav-role");
@@ -300,21 +318,6 @@
       el.style.height = el.scrollHeight + "px";
     }
     chatInput.addEventListener("input", () => autoExpand(chatInput));
-
-    enableUserPushButton.onclick = async () => {
-      enableUserPushButton.disabled = true;
-      userPushStatus.textContent = "Enabling notifications...";
-      try {
-        await enablePushNotifications(auth.currentUser.uid);
-        userPushStatus.textContent = "Message alerts enabled on this device.";
-        userPushStatus.className = "text-xs text-green-400";
-      } catch (error) {
-        userPushStatus.textContent = error.message;
-        userPushStatus.className = "text-xs text-red-400";
-      } finally {
-        enableUserPushButton.disabled = false;
-      }
-    };
 
     async function sendMessagePush(messageId) {
       try {
@@ -401,6 +404,10 @@
       }
 
       renderProfile(currentUserData);
+      initializePushPrompt(user.uid, {
+        enableButton: enableUserPushButton,
+        statusElement: userPushStatus
+      });
 
       loadTasks(user.uid);
       loadChat(user.uid, adminUid);

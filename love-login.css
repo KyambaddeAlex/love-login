@@ -420,6 +420,124 @@ textarea::placeholder {
   box-shadow: 0 18px 44px rgba(67, 43, 43, 0.16) !important;
 }
 
+.notification-prompt-overlay {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  padding: 24px;
+  place-items: center;
+  background: rgba(45, 34, 35, 0.42);
+  backdrop-filter: blur(5px);
+}
+
+.notification-prompt-overlay.hidden {
+  display: none;
+}
+
+.notification-prompt-card {
+  width: min(100%, 440px);
+  padding: 36px;
+  border: 1px solid rgba(238, 222, 219, 0.9);
+  border-radius: 24px;
+  background: var(--surface);
+  box-shadow: 0 28px 90px rgba(47, 32, 34, 0.25);
+  text-align: center;
+  animation: prompt-arrive 220ms ease-out;
+}
+
+.notification-prompt-icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+  place-items: center;
+  border: 1px solid #efdadd;
+  border-radius: 19px;
+  background: #fbefef;
+  color: var(--accent);
+}
+
+.notification-prompt-icon svg {
+  width: 27px;
+  height: 27px;
+}
+
+.notification-prompt-eyebrow {
+  color: var(--accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.notification-prompt-card h2 {
+  margin: 10px 0;
+  color: var(--ink);
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.notification-prompt-card > p:not(.notification-prompt-note) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.91rem;
+  line-height: 1.7;
+}
+
+.notification-prompt-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.notification-prompt-actions button {
+  min-height: 45px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 0.87rem;
+  font-weight: 700;
+}
+
+.notification-prompt-primary {
+  background: linear-gradient(110deg, #a64e61, #bf7180);
+  color: #fff;
+  box-shadow: 0 7px 16px rgba(135, 56, 77, 0.19);
+}
+
+.notification-prompt-primary:hover {
+  background: var(--accent-dark);
+}
+
+.notification-prompt-secondary {
+  border-color: var(--line) !important;
+  background: #fff !important;
+  color: #625957 !important;
+}
+
+.notification-prompt-note {
+  margin: 18px 0 0;
+  color: #9b8d8b;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+@keyframes prompt-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (max-width: 800px) {
   main {
     padding-top: 28px !important;
@@ -453,6 +571,10 @@ textarea::placeholder {
 
   #auth-view > .bg-slate-900 {
     padding: 24px !important;
+  }
+
+  .notification-prompt-card {
+    padding: 30px 24px;
   }
 
   #user-dashboard .grid > div:first-child {

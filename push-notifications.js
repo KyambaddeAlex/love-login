@@ -17,7 +17,9 @@ export async function enablePushNotifications(userId) {
     throw new Error("This browser does not support Firebase web messaging.");
   }
 
-  const permission = await Notification.requestPermission();
+  const permission = Notification.permission === "default"
+    ? await Notification.requestPermission()
+    : Notification.permission;
   if (permission !== "granted") {
     throw new Error(permission === "denied"
       ? "Notifications are blocked in browser settings."
@@ -37,6 +39,76 @@ export async function enablePushNotifications(userId) {
     token,
     updatedAt: serverTimestamp()
   });
+}
+
+export function initializePushPrompt(userId, { enableButton, statusElement }) {
+  const prompt = document.getElementById("notification-prompt");
+  const promptTitle = document.getElementById("notification-prompt-title");
+  const promptDescription = document.getElementById("notification-prompt-description");
+  const promptEnableButton = document.getElementById("notification-prompt-enable");
+  const promptDismissButton = document.getElementById("notification-prompt-dismiss");
+
+  const closePrompt = () => prompt.classList.add("hidden");
+  const showPrompt = () => prompt.classList.remove("hidden");
+
+  const requestEnablement = async () => {
+    enableButton.disabled = true;
+    promptEnableButton.disabled = true;
+    statusElement.textContent = "Enabling message alerts...";
+    statusElement.className = "text-xs text-slate-500";
+
+    try {
+      await enablePushNotifications(userId);
+      statusElement.textContent = "Message alerts enabled on this device.";
+      statusElement.className = "text-xs text-green-400";
+      closePrompt();
+    } catch (error) {
+      console.error("Could not enable message alerts:", error);
+      statusElement.textContent = error.message;
+      statusElement.className = "text-xs text-red-400";
+
+      if ("Notification" in window && Notification.permission === "denied") {
+        promptTitle.textContent = "Allow alerts in your browser";
+        promptDescription.textContent = "Notifications are currently blocked for this site. Open your browser's site settings, change Notifications to Allow, then reload Love Login.";
+        promptEnableButton.classList.add("hidden");
+        showPrompt();
+      }
+    } finally {
+      enableButton.disabled = false;
+      promptEnableButton.disabled = false;
+    }
+  };
+
+  enableButton.onclick = requestEnablement;
+  promptEnableButton.onclick = requestEnablement;
+  promptDismissButton.onclick = closePrompt;
+  prompt.onclick = (event) => {
+    if (event.target === prompt) closePrompt();
+  };
+
+  if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+    promptTitle.textContent = "Message alerts aren't supported here";
+    promptDescription.textContent = "This browser or device can't show web push notifications. You can still read new messages whenever Love Login is open.";
+    promptEnableButton.classList.add("hidden");
+    showPrompt();
+    return;
+  }
+
+  promptEnableButton.classList.remove("hidden");
+  if (Notification.permission === "granted") {
+    void requestEnablement();
+    return;
+  }
+
+  if (Notification.permission === "denied") {
+    promptTitle.textContent = "Allow alerts in your browser";
+    promptDescription.textContent = "Notifications are currently blocked for this site. Open your browser's site settings, change Notifications to Allow, then reload Love Login.";
+    promptEnableButton.classList.add("hidden");
+  } else {
+    promptTitle.textContent = "Stay in the loop";
+    promptDescription.textContent = "Get a notification when a new message arrives in your conversation. Choose Enable alerts to allow notifications on this device.";
+  }
+  showPrompt();
 }
 
 export async function sendPushNotification(messageId) {

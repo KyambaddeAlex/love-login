@@ -230,6 +230,24 @@
     <p id="admin-message-notification-body" class="mt-1 text-sm text-slate-300 break-words"></p>
   </div>
 
+  <div id="notification-prompt" class="notification-prompt-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="notification-prompt-title" aria-describedby="notification-prompt-description">
+    <section class="notification-prompt-card">
+      <div class="notification-prompt-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+        </svg>
+      </div>
+      <span class="notification-prompt-eyebrow">A little heads-up</span>
+      <h2 id="notification-prompt-title">Stay in the loop</h2>
+      <p id="notification-prompt-description"></p>
+      <div class="notification-prompt-actions">
+        <button id="notification-prompt-dismiss" type="button" class="notification-prompt-secondary">Not now</button>
+        <button id="notification-prompt-enable" type="button" class="notification-prompt-primary">Enable alerts</button>
+      </div>
+      <p class="notification-prompt-note">You can change your notification choice in your browser settings at any time.</p>
+    </section>
+  </div>
+
   <script type="module">
     import { auth } from "./firebase-config.js";
     import { db } from "./firebase-config.js";
@@ -240,7 +258,7 @@
       collection, onSnapshot, doc, addDoc,
       serverTimestamp, getDocs, query, where, or
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
-    import { enablePushNotifications, sendPushNotification } from "./push-notifications.js";
+    import { initializePushPrompt, sendPushNotification } from "./push-notifications.js";
 
     const ui = {
       getElement(id) { return document.getElementById(id); },
@@ -344,21 +362,6 @@
       adminChatInput.style.height = "auto";
       adminChatInput.style.height = adminChatInput.scrollHeight + "px";
     });
-
-    enableAdminPushButton.onclick = async () => {
-      enableAdminPushButton.disabled = true;
-      adminPushStatus.textContent = "Enabling notifications...";
-      try {
-        await enablePushNotifications(auth.currentUser.uid);
-        adminPushStatus.textContent = "Message alerts enabled on this device.";
-        adminPushStatus.className = "text-xs text-green-400";
-      } catch (error) {
-        adminPushStatus.textContent = error.message;
-        adminPushStatus.className = "text-xs text-red-400";
-      } finally {
-        enableAdminPushButton.disabled = false;
-      }
-    };
 
     function notifyAdminOfMessage(senderName, messageText) {
       const title = `${senderName} sent you a message`;
@@ -549,6 +552,10 @@
         setAuthView(false);
         destroyUser();
         renderAdminPanel(ui);
+        initializePushPrompt(user.uid, {
+          enableButton: enableAdminPushButton,
+          statusElement: adminPushStatus
+        });
         loadGirlfriends();
         listenForAdminMessages();
       } else {
