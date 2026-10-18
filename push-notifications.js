@@ -6,7 +6,40 @@ import {
   isSupported
 } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-messaging.js";
 
+const nativePushRequests = new Map();
+
+window.__loveLoginPushResult = (requestId, result) => {
+  const request = nativePushRequests.get(requestId);
+  if (!request) return;
+  clearTimeout(request.timeout);
+  nativePushRequests.delete(requestId);
+  if (result?.success) request.resolve();
+  else request.reject(new Error(result?.message || "Could not enable Android notifications."));
+};
+
 export async function enablePushNotifications(userId) {
+  if (window.LoveLoginAndroid?.enablePushNotifications) {
+    const user = auth.currentUser;
+    if (!user || user.uid !== userId) throw new Error("Sign in again to enable notifications.");
+    const idToken = await user.getIdToken();
+    const requestId = `push-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        nativePushRequests.delete(requestId);
+        reject(new Error("Timed out while enabling Android notifications."));
+      }, 60000);
+      nativePushRequests.set(requestId, { resolve, reject, timeout });
+      try {
+        window.LoveLoginAndroid.enablePushNotifications(userId, idToken, requestId);
+      } catch (error) {
+        clearTimeout(timeout);
+        nativePushRequests.delete(requestId);
+        reject(error);
+      }
+    });
+    return;
+  }
+
   if (!PUSH_CONFIG.vapidKey || PUSH_CONFIG.vapidKey.startsWith("SET_")) {
     throw new Error("Add the Firebase Web Push certificate key to firebase-config.js first.");
   }
@@ -52,6 +85,14 @@ export function initializePushPrompt(userId, { enableButton, statusElement }) {
   const showPrompt = () => prompt.classList.remove("hidden");
   closePrompt();
 
+  if (window.LoveLoginAndroid?.enablePushNotifications) {
+    promptTitle.textContent = "Stay close, even when the app is closed";
+    promptDescription.textContent = "Enable Android notifications to see new messages above your other apps.";
+    promptEnableButton.classList.remove("hidden");
+    promptEnableButton.textContent = "Enable Android alerts";
+    showPrompt();
+  }
+
   const requestEnablement = async () => {
     enableButton.disabled = true;
     promptEnableButton.disabled = true;
@@ -92,6 +133,8 @@ export function initializePushPrompt(userId, { enableButton, statusElement }) {
   prompt.onclick = (event) => {
     if (event.target === prompt) closePrompt();
   };
+
+  if (window.LoveLoginAndroid?.enablePushNotifications) return;
 
   if (!("Notification" in window) || !("serviceWorker" in navigator)) {
     promptTitle.textContent = "Message alerts aren't supported here";
