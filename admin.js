@@ -27,11 +27,6 @@ let storyRecords = [];
 let notificationsInitialized = false;
 let editingTaskId = null;
 
-export function initAdmin(ui) {
-  if (auth.currentUser && auth.currentUser.uid !== ADMIN_UID) return;
-  renderAdminPanel(ui);
-}
-
 export function renderAdminPanel(ui) {
   if (usersUnsubscribe) usersUnsubscribe();
   if (tasksUnsubscribe) tasksUnsubscribe();
@@ -39,7 +34,6 @@ export function renderAdminPanel(ui) {
   if (storiesUnsubscribe) storiesUnsubscribe();
 
   ui.showSection("admin-panel");
-  ui.hideSection("user-dashboard");
   ui.hideSection("auth-view");
 
   const usersContainer = ui.getElement("admin-users-list");
@@ -119,7 +113,14 @@ export function renderAdminPanel(ui) {
       renderTaskList(tasksContainer, taskSummary);
     },
     (err) => {
-      usersContainer.innerHTML = '<p class="text-red-400 text-sm">Failed to load accounts.</p>';
+      const errorMessage = err.code === "permission-denied"
+        ? "Access denied. Confirm that you are signed in with the admin account and that the latest Firestore rules are published."
+        : `Failed to load accounts (${err.code || "unknown"}).`;
+      const error = document.createElement("p");
+      error.className = "text-red-400 text-sm";
+      error.textContent = errorMessage;
+      usersContainer.replaceChildren(error);
+      userSelect.innerHTML = '<option value="">Accounts unavailable</option>';
       console.error(err);
     }
   );
