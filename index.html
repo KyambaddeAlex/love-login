@@ -514,7 +514,9 @@
           const result = await sendPushNotification(messageRef.id);
           adminPushStatus.textContent = result.sent
             ? `Message sent; push alert queued for ${result.sent} device${result.sent === 1 ? "" : "s"}.`
-            : "Message sent; this girlfriend has not enabled push alerts.";
+            : result.skippedSenderDevices
+              ? "Message sent; this sender device was skipped to avoid notifying the admin."
+              : "Message sent; this girlfriend has not enabled push alerts.";
           adminPushStatus.className = result.sent ? "text-xs text-green-400" : "text-xs text-slate-400";
         } catch (pushError) {
           console.error("Message sent, but push delivery failed:", pushError);
