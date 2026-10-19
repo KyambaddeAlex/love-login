@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Love Login</title>
+  <title>Love Login</title>  <meta name="theme-color" content="#8e2b4b" />  <meta name="apple-mobile-web-app-capable" content="yes" />  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />  <meta name="apple-mobile-web-app-title" content="Love Login" />  <link rel="manifest" href="./manifest.webmanifest" />  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />  <link rel="icon" type="image/svg+xml" href="./icons/love-login.svg" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./love-login.css">
@@ -257,7 +257,7 @@
   </div>
 
   <script type="module">
-    import { auth, db } from "./firebase-config.js";
+    import "./pwa-install.js"; import { auth, db } from "./firebase-config.js";
     import { register, login, logout, initAuth, getRole, ADMIN_UID } from "./auth.js";
     import { renderAdminPanel, destroyAdmin } from "./admin.js";
     import {
