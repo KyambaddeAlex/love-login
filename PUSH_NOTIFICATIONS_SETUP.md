@@ -7,3 +7,6 @@ Love Login is a progressive web app and can be installed from its secure website
 
 Push permission is device-specific. The recipient must enable alerts on a device not also registered to the sender; shared devices are intentionally excluded to prevent self-notifications. Account data, messaging, and notification delivery require an internet connection.
 
+## Message read receipts
+
+New messages start as unread. The recipient's chat marks incoming messages as read when the chat is visible, and the sender sees **Unread** or **Seen** beneath sent messages. Publish the repository's `firestore.rules` to Firebase for recipients to update only the read status and read timestamp of messages they received.

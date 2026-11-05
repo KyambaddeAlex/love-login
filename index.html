@@ -261,7 +261,7 @@
     import { register, login, logout, initAuth, getRole, ADMIN_UID } from "./auth.js";
     import { renderAdminPanel, destroyAdmin } from "./admin.js";
     import {
-      collection, onSnapshot, doc, addDoc,
+      collection, onSnapshot, doc, addDoc, writeBatch,
       serverTimestamp, getDocs, query, where, or
     } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
     import { initializePushPrompt, sendPushNotification } from "./push-notifications.js";
@@ -366,6 +366,7 @@
     let adminIncomingMessagesUnsubscribe = null;
     let adminIncomingMessagesInitialized = false;
     let adminNotificationTimeout = null;
+    const adminMessagesBeingMarkedRead = new Set();
 
     adminChatInput.addEventListener("input", () => {
       adminChatInput.style.height = "auto";
@@ -446,19 +447,45 @@
       }
       msgs.forEach((m) => {
         const isMe = m.senderId === auth.currentUser.uid;
+        const receipt = m.read === true ? "Seen" : m.read === false ? "Unread" : "Sent";
         const div = document.createElement("div");
         div.className = `max-w-[80%] ${isMe ? "ml-auto text-right" : "mr-auto text-left"}`;
         div.innerHTML = `
           <div class="inline-block px-4 py-2.5 rounded-2xl ${isMe ? "bg-pink-600 text-white" : "bg-slate-800 text-slate-200 border border-slate-700"} shadow-sm">
             <p class="text-sm whitespace-pre-wrap">${escapeHtmlAdmin(m.text)}</p>
             <div class="text-[10px] ${isMe ? "text-pink-200" : "text-slate-500"} mt-1">
-              ${isMe ? "You (Admin)" : (m.senderName || "Girlfriend")} • ${formatTimeAdmin(m.timestamp)}
+              ${isMe ? `You (Admin) • ${receipt}` : (m.senderName || "Girlfriend")} • ${formatTimeAdmin(m.timestamp)}
             </div>
           </div>
         `;
         adminChatMessages.appendChild(div);
       });
       adminChatMessages.scrollTop = adminChatMessages.scrollHeight;
+    }
+
+    async function markAdminMessagesAsRead(messages, recipientUid) {
+      const unread = messages.filter((message) =>
+        message.receiverId === recipientUid &&
+        message.read !== true &&
+        !adminMessagesBeingMarkedRead.has(message.id)
+      );
+      if (unread.length === 0) return;
+
+      unread.forEach((message) => adminMessagesBeingMarkedRead.add(message.id));
+      try {
+        for (let start = 0; start < unread.length; start += 450) {
+          const batch = writeBatch(db);
+          unread.slice(start, start + 450).forEach((message) => {
+            batch.update(doc(db, "messages", message.id), {
+              read: true,
+              readAt: serverTimestamp()
+            });
+          });
+          await batch.commit();
+        }
+      } finally {
+        unread.forEach((message) => adminMessagesBeingMarkedRead.delete(message.id));
+      }
     }
 
     function startAdminChat(uid) {
@@ -487,6 +514,16 @@
           });
           msgs.sort((a, b) => (a.timestamp?.seconds || 0) - (b.timestamp?.seconds || 0));
           renderAdminChat(msgs);
+          markAdminMessagesAsRead(msgs, auth.currentUser.uid).catch((error) => {
+            adminChatStatus.textContent = "Could not mark messages as seen";
+            adminChatStatus.className = "text-xs text-red-400";
+            console.error("Failed to mark admin chat messages as read:", error);
+          });
+        },
+        (error) => {
+          adminChatStatus.textContent = "Failed to load messages";
+          adminChatStatus.className = "text-xs text-red-400";
+          console.error("Failed to load admin chat:", error);
         }
       );
     }
@@ -506,7 +543,8 @@
           receiverId: selectedGirlfriendUid,
           text,
           senderName: "Admin",
-          timestamp: serverTimestamp()
+          timestamp: serverTimestamp(),
+          read: false
         });
         adminChatInput.value = "";
         adminChatInput.style.height = "auto";

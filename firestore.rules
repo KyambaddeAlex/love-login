@@ -76,11 +76,24 @@ service cloud.firestore {
       allow create: if request.auth != null && (
         request.resource.data.senderId == request.auth.uid && (
           isAdmin() || request.resource.data.receiverId == "cRsPXPZrpxQAwAvA7D6Jd9uU9ca2"
-        )
+        ) &&
+        request.resource.data.get("read", false) == false
       );
       allow update: if request.auth != null && (
         isAdmin() ||
-        request.auth.uid == resource.data.senderId
+        (
+          request.auth.uid == resource.data.senderId &&
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(["read", "readAt"])
+        ) ||
+        (
+          request.auth.uid == resource.data.receiverId &&
+          resource.data.get("read", false) != true &&
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(["read", "readAt"]) &&
+          request.resource.data.read == true &&
+          request.resource.data.readAt == request.time
+        )
       );
       allow delete: if request.auth != null && isAdmin();
     }
