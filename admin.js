@@ -1,4 +1,4 @@
-import { auth, db } from "./firebase-config.js";
+import { auth, db, PUSH_CONFIG } from "./firebase-config.js";
 import { ADMIN_UID } from "./auth.js";
 import {
   collection,
@@ -97,6 +97,15 @@ export function renderAdminPanel(ui) {
           accountDetails.appendChild(adminBadge);
         }
         card.prepend(accountDetails);
+        if (!isAdmin && data.role === "girlfriend") {
+          const deleteButton = document.createElement("button");
+          deleteButton.type = "button";
+          deleteButton.className = "shrink-0 rounded-lg border border-red-800 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-950/60 disabled:cursor-wait disabled:opacity-60";
+          deleteButton.textContent = "Delete account";
+          deleteButton.setAttribute("aria-label", `Permanently delete ${data.username || "girlfriend"}'s account`);
+          deleteButton.addEventListener("click", () => deleteGirlfriendAccount(id, data.username, deleteButton));
+          card.appendChild(deleteButton);
+        }
         usersContainer.appendChild(card);
 
         if (!isAdmin) {
@@ -424,7 +433,7 @@ function renderStories(container, count) {
     content.textContent = story.content || "";
     const byline = document.createElement("p");
     byline.className = "mt-2 text-xs text-slate-500";
-    byline.textContent = `${story.authorName || "Girlfriend"} · ${timestampLabel(story.createdAt)}`;
+    byline.textContent = `${story.authorName || "Girlfriend"} Â· ${timestampLabel(story.createdAt)}`;
     item.append(content, byline);
     container.appendChild(item);
   });
@@ -460,6 +469,47 @@ function renderNotifications(container, count, markReadButton) {
     }
     container.appendChild(item);
   });
+}
+
+async function deleteGirlfriendAccount(userId, username, button) {
+  const accountName = username || "this girlfriend";
+  const confirmed = window.confirm(
+    `Permanently delete ${accountName}'s account? This also deletes her profile, messages, tasks, stories, notifications, and registered devices. This cannot be undone.`
+  );
+  if (!confirmed) return;
+
+  const admin = auth.currentUser;
+  if (!admin || admin.uid !== ADMIN_UID) {
+    window.alert("You must be signed in as the admin to delete an account.");
+    return;
+  }
+  if (!PUSH_CONFIG.workerUrl || PUSH_CONFIG.workerUrl.startsWith("SET_")) {
+    window.alert("Account deletion is unavailable until the Cloudflare Worker is configured.");
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = "Deleting...";
+  try {
+    const response = await fetch(PUSH_CONFIG.workerUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${await admin.getIdToken()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ action: "deleteAccount", userId })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.error || `Account deletion failed (HTTP ${response.status}).`);
+    }
+    window.alert(`${accountName}'s account was permanently deleted.`);
+  } catch (error) {
+    console.error("Failed to delete girlfriend account:", error);
+    window.alert(`Could not delete ${accountName}'s account. ${error.message}`);
+    button.disabled = false;
+    button.textContent = "Delete account";
+  }
 }
 
 function timestampValue(value) {
