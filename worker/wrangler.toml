@@ -1,0 +1,9 @@
+name = "love-login-push"
+main = "index.js"
+compatibility_date = "2026-10-17"
+
+[vars]
+FIREBASE_PROJECT_ID = "love-login-fc11d"
+FIREBASE_API_KEY = "AIzaSyCmSct3OAz6k6YwVpt6TQxqOJPQfxwVJm8"
+APP_ORIGIN = "https://kyambaddealex.github.io"
+APP_URL = "https://kyambaddealex.github.io/love-login/"

@@ -20,18 +20,21 @@ let usersUnsubscribe = null;
 let tasksUnsubscribe = null;
 let notificationsUnsubscribe = null;
 let storiesUnsubscribe = null;
+let rewardRequestsUnsubscribe = null;
 let userDirectory = new Map();
 let taskRecords = [];
 let notificationRecords = [];
 let storyRecords = [];
 let notificationsInitialized = false;
 let editingTaskId = null;
+let rewardRequestRecords = [];
 
 export function renderAdminPanel(ui) {
   if (usersUnsubscribe) usersUnsubscribe();
   if (tasksUnsubscribe) tasksUnsubscribe();
   if (notificationsUnsubscribe) notificationsUnsubscribe();
   if (storiesUnsubscribe) storiesUnsubscribe();
+  if (rewardRequestsUnsubscribe) rewardRequestsUnsubscribe();
 
   ui.showSection("admin-panel");
   ui.hideSection("auth-view");
@@ -48,10 +51,13 @@ export function renderAdminPanel(ui) {
   const markNotificationsRead = ui.getElement("admin-mark-notifications-read");
   const storiesContainer = ui.getElement("admin-stories-list");
   const storiesCount = ui.getElement("admin-stories-count");
+  const rewardRequestsContainer = ui.getElement("admin-reward-requests");
+  const rewardRequestCount = ui.getElement("admin-reward-request-count");
   userDirectory = new Map();
   taskRecords = [];
   notificationRecords = [];
   storyRecords = [];
+  rewardRequestRecords = [];
   notificationsInitialized = false;
   editingTaskId = null;
 
@@ -90,6 +96,12 @@ export function renderAdminPanel(ui) {
         email.className = "text-xs text-slate-500 mt-1 break-all";
         email.textContent = data.email || "";
         accountDetails.append(username, email);
+        if (data.role === "girlfriend") {
+          const points = document.createElement("p");
+          points.className = "mt-1 text-xs text-pink-300";
+          points.textContent = `Love Bank · ${Number(data.rewardPoints) || 0} pts`;
+          accountDetails.appendChild(points);
+        }
         if (isAdmin) {
           const adminBadge = document.createElement("span");
           adminBadge.className = "inline-block mt-2 px-2 py-0.5 rounded text-[10px] font-bold bg-pink-600 text-white";
@@ -167,7 +179,7 @@ export function renderAdminPanel(ui) {
       if (newCompletions.length) {
         const notification = newCompletions[newCompletions.length - 1].doc.data();
         const girlfriend = userDirectory.get(notification.assignedTo);
-        completionNotice.textContent = `${girlfriend?.username || "A girlfriend"} completed: ${notification.taskTitle || "a task"}`;
+        completionNotice.textContent = `${girlfriend?.username || "A partner"} submitted: ${notification.taskTitle || "a task"}`;
         completionNotice.classList.remove("hidden");
       }
     },
@@ -194,6 +206,23 @@ export function renderAdminPanel(ui) {
     }
   );
 
+  rewardRequestsUnsubscribe = onSnapshot(
+    collection(db, "rewardRequests"),
+    (snap) => {
+      rewardRequestRecords = snap.docs.map((requestSnap) => ({
+        id: requestSnap.id,
+        ...requestSnap.data()
+      }));
+      rewardRequestRecords.sort((a, b) => timestampValue(b.requestedAt) - timestampValue(a.requestedAt));
+      renderRewardRequests(rewardRequestsContainer, rewardRequestCount);
+    },
+    (err) => {
+      rewardRequestsContainer.innerHTML = '<p class="text-red-400 text-sm">Failed to load reward requests.</p>';
+      rewardRequestCount.textContent = "Unavailable";
+      console.error("Failed to load reward requests:", err);
+    }
+  );
+
   markNotificationsRead.onclick = async () => {
     const unread = notificationRecords.filter((notification) => !notification.read);
     if (!unread.length) return;
@@ -215,25 +244,42 @@ export function renderAdminPanel(ui) {
     }
   };
 
-  taskForm.onsubmit = (e) => {
+  taskForm.onsubmit = async (e) => {
     e.preventDefault();
     const title = taskTitleInput.value.trim();
     const assignedTo = userSelect.value;
-    if (!title || !assignedTo) return;
-    addDoc(collection(db, "tasks"), {
-      title,
-      assignedTo,
-      status: "pending",
-      createdBy: auth.currentUser.uid,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    }).then(() => {
+    const points = Number(ui.getElement("task-points").value);
+    if (!title || !assignedTo || !Number.isSafeInteger(points) || points < 0 || points > 100000) {
+      alert("Enter a task title, choose a partner, and set points from 0 to 100,000.");
+      return;
+    }
+    const submitButton = taskForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    try {
+      await addDoc(collection(db, "tasks"), {
+        title,
+        description: ui.getElement("task-description").value.trim(),
+        category: ui.getElement("task-category").value,
+        priority: ui.getElement("task-priority").value,
+        points,
+        dueDate: ui.getElement("task-due-date").value || null,
+        assignedTo,
+        status: "pending",
+        createdBy: auth.currentUser.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
       taskTitleInput.value = "";
-    }).catch((err) => {
+      ui.getElement("task-description").value = "";
+      ui.getElement("task-due-date").value = "";
+    } catch (err) {
       alert("Failed to create task: " + err.message);
       console.error(err);
-    });
+    } finally {
+      submitButton.disabled = false;
+    }
   };
+
 }
 
 export function destroyAdmin() {
@@ -241,12 +287,95 @@ export function destroyAdmin() {
   if (tasksUnsubscribe) tasksUnsubscribe();
   if (notificationsUnsubscribe) notificationsUnsubscribe();
   if (storiesUnsubscribe) storiesUnsubscribe();
+  if (rewardRequestsUnsubscribe) rewardRequestsUnsubscribe();
   usersUnsubscribe = null;
   tasksUnsubscribe = null;
   notificationsUnsubscribe = null;
   storiesUnsubscribe = null;
+  rewardRequestsUnsubscribe = null;
   notificationsInitialized = false;
   editingTaskId = null;
+  rewardRequestRecords = [];
+}
+
+function renderRewardRequests(container, count) {
+  const pendingCount = rewardRequestRecords.filter((request) => request.status === "pending").length;
+  count.textContent = `${pendingCount} pending`;
+  container.replaceChildren();
+  if (!rewardRequestRecords.length) {
+    container.innerHTML = '<p class="text-slate-500 text-sm">No reward requests yet.</p>';
+    return;
+  }
+  rewardRequestRecords.forEach((request) => {
+    const item = document.createElement("article");
+    item.className = "border-b border-slate-800 py-3 last:border-0";
+    const title = document.createElement("p");
+    title.className = "font-medium text-slate-200";
+    title.textContent = `${request.partnerName || "Partner"} · ${request.rewardTitle || "Reward"}`;
+    const metadata = document.createElement("p");
+    metadata.className = "mt-1 text-xs text-slate-500";
+    metadata.textContent = `${Number(request.cost) || 0} pts · ${request.status || "pending"} · ${timestampLabel(request.requestedAt)}`;
+    item.append(title, metadata);
+    if (request.reviewNote) {
+      const note = document.createElement("p");
+      note.className = "mt-2 text-sm text-pink-200";
+      note.textContent = `Your note: ${request.reviewNote}`;
+      item.appendChild(note);
+    }
+    if (request.status === "pending") {
+      const actions = document.createElement("div");
+      actions.className = "mt-3 flex gap-3";
+      ["approved", "rejected"].forEach((decision) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = decision === "approved"
+          ? "text-xs font-semibold text-green-400 hover:text-green-300 disabled:opacity-50"
+          : "text-xs font-semibold text-amber-400 hover:text-amber-300 disabled:opacity-50";
+        button.textContent = decision === "approved" ? "Approve request" : "Decline & refund";
+        button.onclick = () => reviewRewardRequest(request, decision, button);
+        actions.appendChild(button);
+      });
+      item.appendChild(actions);
+    }
+    container.appendChild(item);
+  });
+}
+
+async function reviewRewardRequest(request, decision, button) {
+  const note = window.prompt(
+    decision === "rejected" ? "Why is this request being declined?" : "Optional note for this request:",
+    ""
+  );
+  if (note === null) return;
+  if (note.trim().length > 2000) {
+    window.alert("The review note must be 2,000 characters or fewer.");
+    return;
+  }
+  const admin = auth.currentUser;
+  if (!admin || admin.uid !== ADMIN_UID) {
+    window.alert("You must be signed in as the admin to review reward requests.");
+    return;
+  }
+  button.disabled = true;
+  try {
+    const response = await fetch(PUSH_CONFIG.workerUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${await admin.getIdToken()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ action: "reviewReward", requestId: request.id, decision, note })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Reward review failed (HTTP ${response.status}).`);
+    window.alert(decision === "rejected"
+      ? `Request declined. ${result.refunded} points were refunded.`
+      : "Reward request approved.");
+  } catch (error) {
+    console.error("Failed to review reward request:", error);
+    window.alert(`Could not review this request. ${error.message}`);
+    button.disabled = false;
+  }
 }
 
 function renderTaskList(container, summary) {
@@ -256,7 +385,7 @@ function renderTaskList(container, summary) {
     return;
   }
 
-  const completedCount = taskRecords.filter((task) => task.status === "done").length;
+  const completedCount = taskRecords.filter((task) => ["done", "approved"].includes(task.status)).length;
   summary.textContent = `${completedCount} of ${taskRecords.length} complete`;
   container.innerHTML = "";
   taskRecords.forEach((task) => {
@@ -280,20 +409,55 @@ function renderTaskList(container, summary) {
     assigneeText.className = "text-xs text-slate-500 mt-1";
     assigneeText.textContent = `Assigned to ${assignee?.username || "Unknown account"}`;
     details.append(title, assigneeText);
-    if (task.status === "done") {
+    if (["done", "submitted", "rejected"].includes(task.status)) {
       const noteLabel = document.createElement("p");
       noteLabel.className = "mt-3 text-xs font-semibold uppercase tracking-wide text-pink-300";
-      noteLabel.textContent = "Girlfriend's completion note";
+      noteLabel.textContent = task.status === "rejected" ? "Latest submission" : "Partner's completion note";
       const completionNote = document.createElement("p");
       completionNote.className = "mt-1 whitespace-pre-wrap break-words text-sm text-slate-300";
       completionNote.textContent = task.completionNote || "No completion note was submitted.";
       details.append(noteLabel, completionNote);
     }
+    if (task.description) {
+      const description = document.createElement("p");
+      description.className = "mt-2 text-sm text-slate-400 whitespace-pre-wrap break-words";
+      description.textContent = task.description;
+      details.appendChild(description);
+    }
+    const taskMeta = document.createElement("p");
+    taskMeta.className = "mt-2 text-xs text-slate-500";
+    taskMeta.textContent = [
+      task.category || "task",
+      task.priority || "",
+      `${Number(task.points) || 0} pts`,
+      task.dueDate ? `Due ${task.dueDate}` : ""
+    ].filter(Boolean).join(" · ");
+    details.appendChild(taskMeta);
+    if (task.adminFeedback) {
+      const feedback = document.createElement("p");
+      feedback.className = "mt-2 text-sm text-pink-200";
+      feedback.textContent = `Admin feedback: ${task.adminFeedback}`;
+      details.appendChild(feedback);
+    }
     const statusBadge = document.createElement("span");
-    statusBadge.className = `inline-flex w-fit items-center rounded px-2.5 py-1 text-xs font-semibold ${task.status === "done" ? "bg-green-950 text-green-300" : "bg-slate-800 text-slate-300"}`;
-    statusBadge.textContent = task.status || "pending";
+    const isComplete = ["done", "approved"].includes(task.status);
+    statusBadge.className = `inline-flex w-fit items-center rounded px-2.5 py-1 text-xs font-semibold ${isComplete ? "bg-green-950 text-green-300" : "bg-slate-800 text-slate-300"}`;
+    statusBadge.textContent = task.status === "done" ? "Completed (legacy)" : (task.status || "pending");
     const actions = document.createElement("div");
     actions.className = "flex items-center gap-3 shrink-0";
+    if (task.status === "submitted" || task.status === "done") {
+      const approveButton = document.createElement("button");
+      approveButton.type = "button";
+      approveButton.className = "text-xs font-semibold text-green-400 hover:text-green-300 disabled:opacity-50";
+      approveButton.textContent = `Approve · +${Number(task.points) || 0} pts`;
+      approveButton.onclick = () => reviewTask(task, "approved", approveButton);
+      const rejectButton = document.createElement("button");
+      rejectButton.type = "button";
+      rejectButton.className = "text-xs font-semibold text-amber-400 hover:text-amber-300 disabled:opacity-50";
+      rejectButton.textContent = "Request revision";
+      rejectButton.onclick = () => reviewTask(task, "rejected", rejectButton);
+      actions.append(approveButton, rejectButton);
+    }
     const editButton = document.createElement("button");
     editButton.type = "button";
     editButton.className = "text-xs font-medium text-pink-400 hover:text-pink-300";
@@ -308,7 +472,7 @@ function renderTaskList(container, summary) {
     deleteButton.textContent = "Delete";
     deleteButton.setAttribute("aria-label", `Delete task ${task.title || "Untitled task"}`);
     deleteButton.onclick = async () => {
-      const prompt = task.status === "done"
+      const prompt = ["done", "submitted", "approved"].includes(task.status)
         ? "Delete this completed task and its completion alerts?"
         : "Delete this task?";
       if (!window.confirm(prompt)) return;
@@ -401,6 +565,46 @@ function renderTaskEditor(row, task) {
   row.appendChild(form);
 }
 
+async function reviewTask(task, decision, button) {
+  const feedback = decision === "rejected"
+    ? window.prompt("Share a helpful note so the partner knows what to update:", task.adminFeedback || "")
+    : window.prompt("Optional feedback for this task:", task.adminFeedback || "");
+  if (feedback === null) return;
+  if (feedback.trim().length > 2000) {
+    window.alert("Feedback must be 2,000 characters or fewer.");
+    return;
+  }
+  const admin = auth.currentUser;
+  if (!admin || admin.uid !== ADMIN_UID) {
+    window.alert("You must be signed in as the admin to review tasks.");
+    return;
+  }
+  if (!PUSH_CONFIG.workerUrl || PUSH_CONFIG.workerUrl.startsWith("SET_")) {
+    window.alert("Task review is unavailable until the Cloudflare Worker is configured.");
+    return;
+  }
+  button.disabled = true;
+  try {
+    const response = await fetch(PUSH_CONFIG.workerUrl, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${await admin.getIdToken()}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ action: "reviewTask", taskId: task.id, decision, feedback })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || `Task review failed (HTTP ${response.status}).`);
+    window.alert(decision === "approved"
+      ? `Task approved. ${result.pointsAwarded} Love Bank points awarded.`
+      : "Task returned for revision.");
+  } catch (error) {
+    console.error("Failed to review task:", error);
+    window.alert(`Could not review this task. ${error.message}`);
+    button.disabled = false;
+  }
+}
+
 async function deleteTaskAndNotifications(taskId) {
   const notifications = await getDocs(query(
     collection(db, "notifications"),
@@ -428,12 +632,26 @@ function renderStories(container, count) {
   storyRecords.forEach((story) => {
     const item = document.createElement("article");
     item.className = "border-b border-slate-800 py-3 last:border-0";
+    if (typeof story.imageUrl === "string" && story.imageUrl.startsWith("https://")) {
+      const image = document.createElement("img");
+      image.src = story.imageUrl;
+      image.alt = `Photo shared by ${story.authorName || "Partner"}`;
+      image.loading = "lazy";
+      image.referrerPolicy = "no-referrer";
+      image.className = "mb-3 max-h-80 w-full rounded-xl object-cover";
+      image.onerror = () => image.remove();
+      item.appendChild(image);
+    }
     const content = document.createElement("p");
     content.className = "text-sm text-slate-200 whitespace-pre-wrap break-words";
     content.textContent = story.content || "";
     const byline = document.createElement("p");
     byline.className = "mt-2 text-xs text-slate-500";
-    byline.textContent = `${story.authorName || "Girlfriend"} Â· ${timestampLabel(story.createdAt)}`;
+    byline.textContent = [
+      story.authorName || "Partner",
+      story.location || "",
+      timestampLabel(story.createdAt)
+    ].filter(Boolean).join(" · ");
     item.append(content, byline);
     container.appendChild(item);
   });
@@ -446,7 +664,7 @@ function renderNotifications(container, count, markReadButton) {
   markReadButton.classList.toggle("opacity-50", unreadCount === 0);
   container.innerHTML = "";
   if (!notificationRecords.length) {
-    container.innerHTML = '<p class="text-slate-500 text-sm">No completed tasks yet.</p>';
+    container.innerHTML = '<p class="text-slate-500 text-sm">No task submissions yet.</p>';
     return;
   }
 
@@ -456,7 +674,7 @@ function renderNotifications(container, count, markReadButton) {
     item.className = `border-b border-slate-800 py-2 last:border-0 ${notification.read ? "opacity-70" : ""}`;
     const message = document.createElement("p");
     message.className = "text-sm text-slate-200";
-    message.textContent = `${girlfriend?.username || "A girlfriend"} completed ${notification.taskTitle || "a task"}`;
+    message.textContent = `${girlfriend?.username || "A girlfriend"} submitted ${notification.taskTitle || "a task"} for review`;
     const meta = document.createElement("p");
     meta.className = "text-xs text-slate-500 mt-1";
     meta.textContent = timestampLabel(notification.createdAt);
@@ -473,10 +691,10 @@ function renderNotifications(container, count, markReadButton) {
 
 async function deleteGirlfriendAccount(userId, username, button) {
   const accountName = username || "this girlfriend";
-  const confirmed = window.confirm(
-    `Permanently delete ${accountName}'s account? This also deletes her profile, messages, tasks, stories, notifications, and registered devices. This cannot be undone.`
+  const confirmation = window.prompt(
+    `Permanently delete ${accountName}'s account and related data? This cannot be undone.\nType ${accountName} to confirm:`
   );
-  if (!confirmed) return;
+  if (confirmation !== accountName) return;
 
   const admin = auth.currentUser;
   if (!admin || admin.uid !== ADMIN_UID) {

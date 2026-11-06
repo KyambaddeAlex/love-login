@@ -12,19 +12,22 @@ service cloud.firestore {
         isAdmin() || request.auth.uid == userId
       );
       allow create: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.keys().hasOnly(["uid", "username", "email", "age", "role", "createdAt"]) &&
+        request.resource.data.uid == userId &&
         request.resource.data.email == request.auth.token.email &&
+        request.resource.data.username is string &&
+        request.resource.data.username.size() > 0 &&
+        request.resource.data.username.size() <= 60 &&
         request.resource.data.role == (
           request.auth.uid == "cRsPXPZrpxQAwAvA7D6Jd9uU9ca2" ? "admin" : "girlfriend"
         );
-      allow update: if request.auth != null && (isAdmin() || (
-        request.auth.uid == userId &&
+      allow update: if request.auth != null &&
+        (
+          isAdmin() || request.auth.uid == userId
+        ) &&
         request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(["username", "age", "bio"])
-      )
-      );
-      allow delete: if request.auth != null && (
-        isAdmin() || request.auth.uid == userId
-      );
+          .hasOnly(["username", "age", "bio"]);
+      allow delete: if false;
     }
 
     // Each account can manage only its own registered push devices.
@@ -39,7 +42,7 @@ service cloud.firestore {
         request.resource.data.updatedAt == request.time;
     }
 
-    // Admins manage tasks; assignees can submit one immutable completion.
+    // Admins manage tasks; assigned partners can submit updates for review.
     match /tasks/{taskId} {
       allow read: if request.auth != null && (
         isAdmin() || request.auth.uid == resource.data.assignedTo
@@ -51,22 +54,31 @@ service cloud.firestore {
           request.resource.data.get("completedAt", null) == resource.data.get("completedAt", null)
         ) || (
           request.auth.uid == resource.data.assignedTo &&
-          resource.data.status != "done" &&
-          resource.data.get("completionNote", "") == "" &&
+          resource.data.status in ["pending", "in_progress", "rejected"] &&
           request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["status", "updatedAt", "completionNote", "completedAt"]) &&
-          request.resource.data.status == "done" &&
-          request.resource.data.completionNote is string &&
-          request.resource.data.completionNote.size() > 0 &&
-          request.resource.data.completionNote.size() <= 2000 &&
+            .hasOnly(["status", "updatedAt", "completionNote", "completedAt", "submittedAt"]) &&
           request.resource.data.updatedAt == request.time &&
-          request.resource.data.completedAt == request.time
+          (
+            (request.resource.data.status == "in_progress" &&
+              resource.data.status == "pending" &&
+              request.resource.data.get("completionNote", "") == resource.data.get("completionNote", "") &&
+              request.resource.data.get("completedAt", null) == resource.data.get("completedAt", null) &&
+              request.resource.data.get("submittedAt", null) == resource.data.get("submittedAt", null)
+            ) ||
+            (request.resource.data.status == "submitted" &&
+              request.resource.data.completionNote is string &&
+              request.resource.data.completionNote.size() > 0 &&
+              request.resource.data.completionNote.size() <= 2000 &&
+              request.resource.data.completedAt == request.time &&
+              request.resource.data.submittedAt == request.time
+            )
+          )
         )
       );
       allow delete: if request.auth != null && isAdmin();
     }
 
-    // Messages collection: both parties can read/write.
+    // Only the recipient can mark a message as read.
     match /messages/{messageId} {
       allow read: if request.auth != null && (
         isAdmin() ||
@@ -79,23 +91,25 @@ service cloud.firestore {
         ) &&
         request.resource.data.get("read", false) == false
       );
-      allow update: if request.auth != null && (
-        isAdmin() ||
-        (
-          request.auth.uid == resource.data.senderId &&
-          !request.resource.data.diff(resource.data).affectedKeys()
-            .hasAny(["read", "readAt"])
-        ) ||
-        (
-          request.auth.uid == resource.data.receiverId &&
-          resource.data.get("read", false) != true &&
-          request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(["read", "readAt"]) &&
-          request.resource.data.read == true &&
-          request.resource.data.readAt == request.time
-        )
-      );
+      allow update: if request.auth != null &&
+        request.auth.uid == resource.data.receiverId &&
+        resource.data.get("read", false) != true &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(["read", "readAt"]) &&
+        request.resource.data.read == true &&
+        request.resource.data.readAt == request.time;
       allow delete: if request.auth != null && isAdmin();
+    }
+
+    match /pointLedger/{entryId} {
+      allow read: if request.auth != null &&
+        (isAdmin() || request.auth.uid == resource.data.userId);
+      allow create, update, delete: if false;
+    }
+
+    match /rewardRequests/{requestId} {
+      allow read: if request.auth != null &&
+        (isAdmin() || request.auth.uid == resource.data.partnerId);
+      allow create, update, delete: if false;
     }
 
     match /notifications/{notificationId} {
@@ -114,7 +128,7 @@ service cloud.firestore {
         request.resource.data.createdAt == request.time &&
         exists(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)) &&
         get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.assignedTo == request.auth.uid &&
-        get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status == "done" &&
+        get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.status in ["done", "submitted"] &&
         request.resource.data.taskTitle == get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.title &&
         request.resource.data.completionNote == get(/databases/$(database)/documents/tasks/$(request.resource.data.taskId)).data.completionNote;
       allow update: if isAdmin() &&
@@ -129,13 +143,22 @@ service cloud.firestore {
       allow read: if isAdmin();
       allow create: if request.auth != null &&
         request.auth.uid != "cRsPXPZrpxQAwAvA7D6Jd9uU9ca2" &&
-        request.resource.data.keys().hasOnly(["content", "authorId", "authorName", "createdAt"]) &&
+        request.resource.data.keys().hasOnly([
+          "content", "authorId", "authorName", "createdAt", "imageUrl", "location"
+        ]) &&
         request.resource.data.authorId == request.auth.uid &&
         request.resource.data.content is string &&
         request.resource.data.content.size() > 0 &&
         request.resource.data.content.size() <= 2000 &&
         request.resource.data.authorName is string &&
-        request.resource.data.createdAt == request.time;
+        request.resource.data.createdAt == request.time &&
+        (!("imageUrl" in request.resource.data) ||
+          (request.resource.data.imageUrl is string &&
+            request.resource.data.imageUrl.size() <= 2048 &&
+            request.resource.data.imageUrl.matches("^https://.*"))) &&
+        (!("location" in request.resource.data) ||
+          (request.resource.data.location is string &&
+            request.resource.data.location.size() <= 100));
       allow update, delete: if isAdmin();
     }
   }

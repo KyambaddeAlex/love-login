@@ -205,6 +205,14 @@
             <textarea id="story-input" rows="4" maxlength="2000" required
               placeholder="Write a story or memory to share with Alex..."
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-y"></textarea>
+            <label for="story-image-url" class="block text-xs text-slate-400">Photo URL (optional)
+              <input id="story-image-url" type="url" maxlength="2048" placeholder="https://..."
+                class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500"/>
+            </label>
+            <label for="story-location" class="block text-xs text-slate-400">Location (optional)
+              <input id="story-location" type="text" maxlength="100" placeholder="Where was this?"
+                class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500"/>
+            </label>
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <p id="story-status" role="status" aria-live="polite" class="text-xs text-slate-400"></p>
               <button id="btn-add-story" type="submit"
@@ -287,6 +295,8 @@
     const userMessageNotificationBody = document.getElementById("user-message-notification-body");
     const storyForm = document.getElementById("story-form");
     const storyInput = document.getElementById("story-input");
+    const storyImageUrl = document.getElementById("story-image-url");
+    const storyLocation = document.getElementById("story-location");
     const storyStatus = document.getElementById("story-status");
     const btnAddStory = document.getElementById("btn-add-story");
 
@@ -528,7 +538,9 @@
           taskCountBadge.textContent = `${tasks.length} task${tasks.length !== 1 ? "s" : ""}`;
 
           tasks.forEach(({ id, data }) => {
-            const done = data.status === "done";
+            const done = ["done", "approved"].includes(data.status);
+            const awaitingReview = data.status === "submitted";
+            const canSubmit = ["pending", "in_progress", "rejected"].includes(data.status);
             const taskDetails = document.createElement("details");
             taskDetails.className = `bg-slate-800 border border-slate-700 rounded-xl p-4 ${done ? "bg-slate-800/60" : ""}`;
             const taskSummary = document.createElement("summary");
@@ -538,7 +550,11 @@
             taskTitle.textContent = data.title || "Untitled task";
             const statusBadge = document.createElement("span");
             statusBadge.className = `shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${done ? "bg-green-950 text-green-300" : "bg-slate-700 text-slate-300"}`;
-            statusBadge.textContent = done ? "Done" : "Open";
+            statusBadge.textContent = data.status === "done" ? "Done (legacy)" :
+              data.status === "approved" ? "Approved" :
+              awaitingReview ? "Awaiting review" :
+              data.status === "in_progress" ? "In progress" :
+              data.status === "rejected" ? "Needs revision" : "To do";
             taskSummary.append(taskTitle, statusBadge);
             taskDetails.appendChild(taskSummary);
 
@@ -548,6 +564,21 @@
             assignedBy.className = "text-xs text-slate-500";
             assignedBy.textContent = `Assigned by: ${data.createdBy ? "Alex" : "—"}`;
             taskContent.appendChild(assignedBy);
+            const metadata = document.createElement("p");
+            metadata.className = "mt-2 text-xs text-slate-500";
+            metadata.textContent = [
+              data.category || "task",
+              data.priority || "",
+              `${Number(data.points) || 0} pts`,
+              data.dueDate ? `Due ${data.dueDate}` : ""
+            ].filter(Boolean).join(" · ");
+            taskContent.appendChild(metadata);
+            if (data.description) {
+              const description = document.createElement("p");
+              description.className = "mt-2 text-sm text-slate-400 whitespace-pre-wrap";
+              description.textContent = data.description;
+              taskContent.appendChild(description);
+            }
 
             if (done) {
               const noteLabel = document.createElement("p");
@@ -557,7 +588,27 @@
               note.className = "mt-1 whitespace-pre-wrap break-words text-sm text-slate-200";
               note.textContent = data.completionNote || "No completion note was submitted.";
               taskContent.append(noteLabel, note);
-            } else {
+              if (data.adminFeedback) {
+                const feedback = document.createElement("p");
+                feedback.className = "mt-3 text-sm text-pink-200";
+                feedback.textContent = `Alex's feedback: ${data.adminFeedback}`;
+                taskContent.appendChild(feedback);
+              }
+            } else if (awaitingReview) {
+              const waiting = document.createElement("p");
+              waiting.className = "mt-3 text-sm text-amber-300";
+              waiting.textContent = "Your update is with Alex for review.";
+              const note = document.createElement("p");
+              note.className = "mt-2 whitespace-pre-wrap break-words text-sm text-slate-300";
+              note.textContent = data.completionNote || "";
+              taskContent.append(waiting, note);
+            } else if (canSubmit) {
+              if (data.status === "rejected" && data.adminFeedback) {
+                const feedback = document.createElement("p");
+                feedback.className = "mt-3 text-sm text-amber-200";
+                feedback.textContent = `Alex's feedback: ${data.adminFeedback}`;
+                taskContent.appendChild(feedback);
+              }
               const completionForm = document.createElement("form");
               completionForm.className = "mt-3 space-y-3";
               const noteLabel = document.createElement("label");
@@ -575,11 +626,31 @@
               const completeButton = document.createElement("button");
               completeButton.type = "submit";
               completeButton.className = "w-fit rounded-lg bg-pink-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-pink-500 disabled:cursor-not-allowed disabled:opacity-50";
-              completeButton.textContent = "Mark task done";
+              completeButton.textContent = "Submit for review";
               const completionStatus = document.createElement("p");
               completionStatus.className = "text-xs text-slate-400";
               completionStatus.setAttribute("role", "status");
               completionStatus.setAttribute("aria-live", "polite");
+              if (data.status === "pending") {
+                const startButton = document.createElement("button");
+                startButton.type = "button";
+                startButton.className = "w-fit rounded-lg border border-slate-600 px-4 py-2 text-sm font-semibold text-slate-200 transition hover:bg-slate-700 disabled:opacity-50";
+                startButton.textContent = "Start task";
+                startButton.onclick = async () => {
+                  startButton.disabled = true;
+                  try {
+                    await updateDoc(doc(db, "tasks", id), {
+                      status: "in_progress",
+                      updatedAt: serverTimestamp()
+                    });
+                  } catch (error) {
+                    startButton.disabled = false;
+                    completionStatus.textContent = `Could not start this task: ${error.message}`;
+                    completionStatus.className = "text-xs text-red-400";
+                  }
+                };
+                formActions.appendChild(startButton);
+              }
               formActions.append(completeButton, completionStatus);
               completionForm.append(noteLabel, formActions);
               taskContent.appendChild(completionForm);
@@ -596,36 +667,39 @@
 
               const taskRef = doc(db, "tasks", id);
               completeButton.disabled = true;
-              completionStatus.textContent = "Saving your update...";
+              completionStatus.textContent = "Submitting your update...";
               completionStatus.className = "text-xs text-slate-400";
               try {
                 await updateDoc(taskRef, {
-                  status: "done",
+                  status: "submitted",
                   completionNote,
+                  submittedAt: serverTimestamp(),
                   completedAt: serverTimestamp(),
                   updatedAt: serverTimestamp()
                 });
 
-                completionStatus.textContent = "Your update was sent to Alex.";
+                completionStatus.textContent = "Your update was sent to Alex for review.";
                 completionStatus.className = "text-xs text-green-400";
 
-                try {
-                  await setDoc(doc(db, "notifications", id), {
-                    type: "task_completed",
-                    taskId: id,
-                    taskTitle: data.title || "Untitled task",
-                    completionNote,
-                    assignedTo: uid,
-                    read: false,
-                    createdAt: serverTimestamp()
-                  });
-                } catch (notificationError) {
-                  console.error("Task completed, but its admin notification could not be saved:", notificationError);
-                  completionStatus.textContent = "Your task update was sent to Alex, but the notification could not be saved.";
-                  completionStatus.className = "text-xs text-amber-400";
+                if (data.status !== "rejected") {
+                  try {
+                    await setDoc(doc(db, "notifications", id), {
+                      type: "task_completed",
+                      taskId: id,
+                      taskTitle: data.title || "Untitled task",
+                      completionNote,
+                      assignedTo: uid,
+                      read: false,
+                      createdAt: serverTimestamp()
+                    });
+                  } catch (notificationError) {
+                    console.error("Task submitted, but its admin notification could not be saved:", notificationError);
+                    completionStatus.textContent = "Your task was sent to Alex, but its notification could not be saved.";
+                    completionStatus.className = "text-xs text-amber-400";
+                  }
                 }
               } catch (err) {
-                completionStatus.textContent = `Could not save your task update: ${err.message}`;
+                completionStatus.textContent = `Could not submit your task update: ${err.message}`;
                 completionStatus.className = "text-xs text-red-400";
                 console.error("Failed to save task completion:", err);
                 completeButton.disabled = false;
@@ -641,6 +715,132 @@
           console.error(err);
         }
       );
+    }
+
+    function loadRewards(uid) {
+      rewardProfileUnsubscribe = onSnapshot(
+        doc(db, "users", uid),
+        (snap) => {
+          if (!snap.exists()) {
+            rewardStatus.textContent = "Your profile is unavailable, so rewards cannot be requested.";
+            rewardStatus.className = "mt-2 text-xs text-red-400";
+            return;
+          }
+          const balance = Number(snap.data().rewardPoints) || 0;
+          rewardPointsBalance.textContent = String(balance);
+          renderRewardCatalog(balance);
+        },
+        (error) => {
+          rewardPointsBalance.textContent = "—";
+          rewardsContainer.innerHTML = '<p class="text-red-400 text-sm">Could not load your Love Bank balance.</p>';
+          console.error("Failed to load Love Bank balance:", error);
+        }
+      );
+      rewardRequestsUnsubscribe = onSnapshot(
+        query(collection(db, "rewardRequests"), where("partnerId", "==", uid)),
+        (snap) => {
+          rewardRequestsContainer.replaceChildren();
+          const requests = snap.docs.map((requestSnap) => ({ id: requestSnap.id, ...requestSnap.data() }));
+          requests.sort((a, b) => (b.requestedAt?.seconds || 0) - (a.requestedAt?.seconds || 0));
+          if (!requests.length) {
+            rewardRequestsContainer.innerHTML = '<p class="text-slate-500 text-sm">No requests yet.</p>';
+            return;
+          }
+          requests.forEach((request) => {
+            const item = document.createElement("p");
+            item.className = "text-sm text-slate-300";
+            item.textContent = `${request.rewardTitle || "Reward"} · ${request.cost || 0} pts · ${request.status || "pending"}${request.reviewNote ? ` · ${request.reviewNote}` : ""}`;
+            rewardRequestsContainer.appendChild(item);
+          });
+        },
+        (error) => {
+          rewardRequestsContainer.innerHTML = '<p class="text-red-400 text-sm">Could not load reward requests.</p>';
+          console.error("Failed to load reward requests:", error);
+        }
+      );
+      pointsLedgerUnsubscribe = onSnapshot(
+        query(collection(db, "pointLedger"), where("userId", "==", uid)),
+        (snap) => {
+          pointsHistoryContainer.replaceChildren();
+          const entries = snap.docs.map((entrySnap) => entrySnap.data());
+          entries.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+          if (!entries.length) {
+            pointsHistoryContainer.innerHTML = '<p class="text-slate-500 text-sm">No points activity yet.</p>';
+            return;
+          }
+          entries.slice(0, 20).forEach((entry) => {
+            const item = document.createElement("p");
+            item.className = "text-sm text-slate-300";
+            const amount = Number(entry.amount) || 0;
+            item.textContent = `${amount > 0 ? "+" : ""}${amount} pts · ${entry.description || "Points update"}`;
+            pointsHistoryContainer.appendChild(item);
+          });
+        },
+        (error) => {
+          pointsHistoryContainer.innerHTML = '<p class="text-red-400 text-sm">Could not load points history.</p>';
+          console.error("Failed to load points history:", error);
+        }
+      );
+    }
+
+    function renderRewardCatalog(balance) {
+      const rewards = [
+        { id: "dinner", title: "Rooftop Dinner", description: "A cozy dinner date together.", cost: 150 },
+        { id: "spa", title: "Spa Day", description: "A relaxing day planned for you.", cost: 250 },
+        { id: "getaway", title: "Weekend Getaway", description: "A little trip and time away together.", cost: 500 },
+        { id: "homeFeast", title: "Home-Cooked Feast", description: "A favorite meal made with love.", cost: 100 }
+      ];
+      rewardsContainer.replaceChildren();
+      rewards.forEach((reward) => {
+        const card = document.createElement("article");
+        card.className = "border-b border-slate-800 pb-3 last:border-0";
+        const title = document.createElement("p");
+        title.className = "text-sm font-semibold text-slate-200";
+        title.textContent = reward.title;
+        const description = document.createElement("p");
+        description.className = "mt-1 text-xs text-slate-500";
+        description.textContent = `${reward.description} · ${reward.cost} pts`;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "mt-2 text-xs font-semibold text-pink-400 hover:text-pink-300 disabled:cursor-not-allowed disabled:opacity-50";
+        button.textContent = "Request reward";
+        button.disabled = balance < reward.cost;
+        button.onclick = () => requestReward(reward.id, button);
+        card.append(title, description, button);
+        rewardsContainer.appendChild(card);
+      });
+    }
+
+    async function requestReward(rewardId, button) {
+      if (!PUSH_CONFIG.workerUrl || PUSH_CONFIG.workerUrl.startsWith("SET_")) {
+        rewardStatus.textContent = "Reward requests are unavailable until the Cloudflare Worker is configured.";
+        rewardStatus.className = "mt-2 text-xs text-red-400";
+        return;
+      }
+      const user = auth.currentUser;
+      if (!user || user.uid === ADMIN_UID) return;
+      button.disabled = true;
+      rewardStatus.textContent = "Submitting your request...";
+      rewardStatus.className = "mt-2 text-xs text-slate-400";
+      try {
+        const response = await fetch(PUSH_CONFIG.workerUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${await user.getIdToken()}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ action: "requestReward", rewardId })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `Reward request failed (HTTP ${response.status}).`);
+        rewardStatus.textContent = `Request sent. ${result.cost} points reserved; your balance is ${result.balance}.`;
+        rewardStatus.className = "mt-2 text-xs text-green-400";
+      } catch (error) {
+        console.error("Failed to request reward:", error);
+        rewardStatus.textContent = `Could not request this reward: ${error.message}`;
+        rewardStatus.className = "mt-2 text-xs text-red-400";
+        button.disabled = false;
+      }
     }
 
     /* ---------- Chat ---------- */
@@ -779,6 +979,8 @@
     storyForm.onsubmit = async (event) => {
       event.preventDefault();
       const content = storyInput.value.trim();
+      const imageUrl = storyImageUrl.value.trim();
+      const location = storyLocation.value.trim();
       if (!content) {
         storyStatus.textContent = "Write a story before sharing.";
         storyStatus.className = "text-xs text-red-400";
@@ -794,9 +996,13 @@
           content,
           authorId: auth.currentUser.uid,
           authorName: currentUserData?.username || auth.currentUser.email.split("@")[0],
+          ...(imageUrl ? { imageUrl } : {}),
+          ...(location ? { location } : {}),
           createdAt: serverTimestamp()
         });
         storyInput.value = "";
+        storyImageUrl.value = "";
+        storyLocation.value = "";
         storyStatus.textContent = "Your story was shared with Alex.";
         storyStatus.className = "text-xs text-green-400";
       } catch (error) {

@@ -158,6 +158,28 @@
                 <label for="task-title" class="block text-xs font-medium text-slate-400 mb-1">Task title</label>
                 <input id="task-title" type="text" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition" placeholder="e.g. Buy flowers"/>
               </div>
+              <div>
+                <label for="task-description" class="block text-xs font-medium text-slate-400 mb-1">A few details</label>
+                <textarea id="task-description" rows="2" maxlength="1000" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition resize-y" placeholder="Optional notes or instructions"></textarea>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <label for="task-category" class="block text-xs font-medium text-slate-400">Category
+                  <select id="task-category" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    <option value="fun">Fun</option><option value="date_night">Date night</option><option value="self_care">Self care</option><option value="errand">Errand</option><option value="surprise">Surprise</option><option value="fitness">Fitness</option>
+                  </select>
+                </label>
+                <label for="task-priority" class="block text-xs font-medium text-slate-400">Priority
+                  <select id="task-priority" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    <option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option><option value="urgent">Urgent</option>
+                  </select>
+                </label>
+                <label for="task-points" class="block text-xs font-medium text-slate-400">Love Bank points
+                  <input id="task-points" type="number" min="0" max="100000" step="1" value="50" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500"/>
+                </label>
+              </div>
+              <label for="task-due-date" class="block text-xs font-medium text-slate-400">Due date (optional)
+                <input id="task-due-date" type="date" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-3 text-white focus:outline-none focus:ring-2 focus:ring-pink-500"/>
+              </label>
               <button type="submit" class="w-full bg-pink-600 hover:bg-pink-500 text-white font-semibold py-3 rounded-lg transition shadow-lg shadow-pink-900/20">Create Task</button>
             </form>
           </section>
@@ -170,7 +192,7 @@
             <p id="admin-completion-notice" role="status" aria-live="polite" class="hidden mt-4 rounded-lg border border-green-700/60 bg-green-950/40 px-4 py-3 text-sm text-green-300"></p>
             <div class="mt-5 border-t border-slate-800 pt-5">
               <div class="flex items-center justify-between gap-3 mb-3">
-                <h4 class="text-sm font-semibold text-white">Recent completions</h4>
+                <h4 class="text-sm font-semibold text-white">Recent submissions</h4>
                 <div class="flex items-center gap-3">
                   <span id="admin-notification-count" class="text-xs text-slate-400">0 new</span>
                   <button id="admin-mark-notifications-read" type="button" disabled class="text-xs text-pink-400 hover:text-pink-300 disabled:cursor-not-allowed">Mark all read</button>
@@ -184,6 +206,15 @@
               <h4 class="text-sm font-semibold text-white mb-3">Assigned tasks</h4>
               <div id="admin-tasks-list" class="space-y-2">
                 <p class="text-slate-500 text-sm">Loading tasks...</p>
+              </div>
+            </div>
+            <div class="mt-5 border-t border-slate-800 pt-5">
+              <div class="flex items-center justify-between gap-3 mb-3">
+                <h4 class="text-sm font-semibold text-white">Love Bank requests</h4>
+                <span id="admin-reward-request-count" class="text-xs text-slate-400">Loading...</span>
+              </div>
+              <div id="admin-reward-requests" class="space-y-3">
+                <p class="text-slate-500 text-sm">Loading reward requests...</p>
               </div>
             </div>
           </section>
