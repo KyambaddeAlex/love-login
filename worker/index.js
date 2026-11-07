@@ -508,6 +508,14 @@ async function deleteGirlfriendAccount(env, accessToken, userId) {
     throw httpError(403, "Only girlfriend accounts can be deleted here.");
   }
 
+  await deleteMatchingDocuments(env, accessToken, "tasks", "assignedTo", userId);
+  await deletePartnerMessages(env, accessToken, userId);
+  await deletePartnerStories(env, accessToken, userId);
+  await deleteMatchingDocuments(env, accessToken, "notifications", "assignedTo", userId);
+  await deleteMatchingDocuments(env, accessToken, "rewardRequests", "partnerId", userId);
+  await deleteMatchingDocuments(env, accessToken, "pointLedger", "userId", userId);
+  await deletePushDevices(env, accessToken, userId);
+
   const authResponse = await fetch(
     `https://identitytoolkit.googleapis.com/v1/projects/${encodeURIComponent(env.FIREBASE_PROJECT_ID)}/accounts:batchDelete`,
     {
@@ -521,20 +529,104 @@ async function deleteGirlfriendAccount(env, accessToken, userId) {
   );
   if (!authResponse.ok) throw new Error("Firebase Authentication could not delete the account.");
   const authResult = await authResponse.json();
-  if (authResult.errors?.length) {
+  if (authResult.errors?.some((error) => !["USER_NOT_FOUND"].includes(error.message || error.errorCode))) {
     throw new Error("Firebase Authentication could not delete the account.");
   }
 
-  await deleteMatchingDocuments(env, accessToken, "tasks", "assignedTo", userId);
-  await deleteMatchingDocuments(env, accessToken, "messages", "senderId", userId);
-  await deleteMatchingDocuments(env, accessToken, "messages", "receiverId", userId);
-  await deleteMatchingDocuments(env, accessToken, "stories", "authorId", userId);
-  await deleteMatchingDocuments(env, accessToken, "notifications", "assignedTo", userId);
-  await deleteMatchingDocuments(env, accessToken, "rewardRequests", "partnerId", userId);
-  await deleteMatchingDocuments(env, accessToken, "pointLedger", "userId", userId);
-  await deletePushDevices(env, accessToken, userId);
   await deleteFirestoreDocument(env, accessToken, `users/${encodeURIComponent(userId)}`);
   await deleteFirestoreDocument(env, accessToken, `pushTokens/${encodeURIComponent(userId)}`);
+}
+
+async function deletePartnerMessages(env, accessToken, userId) {
+  const url = firestoreDocumentsUrl(env, ":runQuery");
+  for (const fieldPath of ["senderId", "receiverId"]) {
+    while (true) {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          structuredQuery: {
+            from: [{ collectionId: "messages" }],
+            where: {
+              fieldFilter: {
+                field: { fieldPath },
+                op: "EQUAL",
+                value: { stringValue: userId }
+              }
+            },
+            limit: 500
+          }
+        })
+      });
+      if (!response.ok) throw new Error("Could not find the account's messages before deletion.");
+      const rows = await response.json();
+      const messages = rows.map((row) => row.document).filter(Boolean);
+      if (!messages.length) break;
+      for (const message of messages) {
+        const messageId = message.name.split("/").pop();
+        await deleteAccountSubcollection(env, accessToken, "messages", messageId, "reactions");
+      }
+      await deleteFirestoreDocuments(env, accessToken, messages.map((message) => message.name));
+    }
+  }
+}
+
+async function deletePartnerStories(env, accessToken, userId) {
+  const url = firestoreDocumentsUrl(env, ":runQuery");
+  while (true) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        structuredQuery: {
+          from: [{ collectionId: "stories" }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: "authorId" },
+              op: "EQUAL",
+              value: { stringValue: userId }
+            }
+          },
+          limit: 500
+        }
+      })
+    });
+    if (!response.ok) throw new Error("Could not find the partner's stories before account deletion.");
+    const rows = await response.json();
+    const stories = rows.map((row) => row.document).filter(Boolean);
+    if (!stories.length) return;
+    for (const story of stories) {
+      const storyId = story.name.split("/").pop();
+      for (const subcollection of ["likes", "comments"]) {
+        await deleteAccountSubcollection(env, accessToken, "stories", storyId, subcollection);
+      }
+      await deleteFirestoreDocument(env, accessToken, `stories/${encodeURIComponent(storyId)}`);
+    }
+  }
+}
+
+async function deleteAccountSubcollection(env, accessToken, collectionId, documentId, subcollection) {
+  let pageToken = "";
+  do {
+    const params = new URLSearchParams({ pageSize: "500" });
+    if (pageToken) params.set("pageToken", pageToken);
+    const response = await firestoreRequest(
+      env,
+      accessToken,
+      `${collectionId}/${encodeURIComponent(documentId)}/${subcollection}?${params}`
+    );
+    if (!response.ok) throw new Error(`Could not remove the account's ${subcollection}.`);
+    const result = await response.json();
+    const documentNames = (result.documents || []).map((document) => document.name);
+    if (documentNames.length) await deleteFirestoreDocuments(env, accessToken, documentNames);
+    pageToken = result.nextPageToken || "";
+  } while (pageToken);
 }
 
 async function deleteMatchingDocuments(env, accessToken, collectionId, fieldPath, userId) {

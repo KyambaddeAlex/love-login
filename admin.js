@@ -115,8 +115,14 @@ export function renderAdminPanel(ui) {
           deleteButton.className = "shrink-0 rounded-lg border border-red-800 px-3 py-2 text-xs font-semibold text-red-300 hover:bg-red-950/60 disabled:cursor-wait disabled:opacity-60";
           deleteButton.textContent = "Delete account";
           deleteButton.setAttribute("aria-label", `Permanently delete ${data.username || "girlfriend"}'s account`);
-          deleteButton.addEventListener("click", () => deleteGirlfriendAccount(id, data.username, deleteButton));
+          const deleteStatus = document.createElement("p");
+          deleteStatus.className = "account-delete-status";
+          deleteStatus.setAttribute("role", "status");
+          deleteButton.addEventListener("click", () =>
+            deleteGirlfriendAccount(id, data.username, deleteButton, deleteStatus)
+          );
           card.appendChild(deleteButton);
+          card.appendChild(deleteStatus);
         }
         usersContainer.appendChild(card);
 
@@ -689,25 +695,24 @@ function renderNotifications(container, count, markReadButton) {
   });
 }
 
-async function deleteGirlfriendAccount(userId, username, button) {
+async function deleteGirlfriendAccount(userId, username, button, status) {
   const accountName = username || "this girlfriend";
-  const confirmation = window.prompt(
-    `Permanently delete ${accountName}'s account and related data? This cannot be undone.\nType ${accountName} to confirm:`
-  );
-  if (confirmation !== accountName) return;
+  const confirmed = await confirmAccountDeletion(accountName);
+  if (!confirmed) return;
 
   const admin = auth.currentUser;
   if (!admin || admin.uid !== ADMIN_UID) {
-    window.alert("You must be signed in as the admin to delete an account.");
+    status.textContent = "Sign in with the admin account to delete a partner.";
     return;
   }
   if (!PUSH_CONFIG.workerUrl || PUSH_CONFIG.workerUrl.startsWith("SET_")) {
-    window.alert("Account deletion is unavailable until the Cloudflare Worker is configured.");
+    status.textContent = "Account deletion is unavailable until the Cloudflare Worker is configured.";
     return;
   }
 
   button.disabled = true;
   button.textContent = "Deleting...";
+  status.textContent = "Removing the account and its related data...";
   try {
     const response = await fetch(PUSH_CONFIG.workerUrl, {
       method: "POST",
@@ -721,13 +726,80 @@ async function deleteGirlfriendAccount(userId, username, button) {
     if (!response.ok) {
       throw new Error(result.error || `Account deletion failed (HTTP ${response.status}).`);
     }
-    window.alert(`${accountName}'s account was permanently deleted.`);
+    status.textContent = `${accountName}'s account and related data were deleted.`;
   } catch (error) {
     console.error("Failed to delete girlfriend account:", error);
-    window.alert(`Could not delete ${accountName}'s account. ${error.message}`);
+    status.textContent = `Could not delete ${accountName}'s account: ${error.message}`;
     button.disabled = false;
     button.textContent = "Delete account";
   }
+}
+
+function confirmAccountDeletion(accountName) {
+  return new Promise((resolve) => {
+    const dialog = document.createElement("dialog");
+    dialog.className = "account-delete-dialog";
+    dialog.setAttribute("aria-labelledby", "account-delete-title");
+    dialog.setAttribute("aria-describedby", "account-delete-description");
+
+    const heading = document.createElement("h2");
+    heading.id = "account-delete-title";
+    heading.textContent = "Permanently delete account?";
+    const description = document.createElement("p");
+    description.id = "account-delete-description";
+    description.textContent =
+      `This permanently deletes ${accountName}'s sign-in and their profile, messages, tasks, stories, and reward history. This cannot be undone.`;
+    const form = document.createElement("form");
+    const label = document.createElement("label");
+    label.textContent = `Type ${accountName} to confirm`;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.required = true;
+    input.setAttribute("aria-label", `Type ${accountName} to confirm`);
+    const actions = document.createElement("div");
+    actions.className = "account-delete-actions";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "account-delete-cancel";
+    cancel.textContent = "Cancel";
+    const confirm = document.createElement("button");
+    confirm.type = "submit";
+    confirm.className = "account-delete-confirm";
+    confirm.disabled = true;
+    confirm.textContent = "Delete account";
+    label.appendChild(input);
+    actions.append(cancel, confirm);
+    form.append(label, actions);
+    dialog.append(heading, description, form);
+    document.body.appendChild(dialog);
+
+    let result = false;
+    dialog.addEventListener("close", () => {
+      dialog.remove();
+      resolve(result);
+    }, { once: true });
+    input.addEventListener("input", () => {
+      confirm.disabled = input.value.trim() !== accountName;
+    });
+    cancel.addEventListener("click", () => dialog.close());
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (input.value.trim() !== accountName) return;
+      result = true;
+      dialog.close();
+    });
+
+    try {
+      dialog.showModal();
+      input.focus();
+    } catch (error) {
+      dialog.remove();
+      console.error("Could not open the account deletion confirmation:", error);
+      resolve(false);
+    }
+  });
 }
 
 function timestampValue(value) {
