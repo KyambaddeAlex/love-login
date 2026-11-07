@@ -348,15 +348,12 @@ function renderRewardRequests(container, count) {
 }
 
 async function reviewRewardRequest(request, decision, button) {
-  const note = window.prompt(
-    decision === "rejected" ? "Why is this request being declined?" : "Optional note for this request:",
+  const note = await requestReviewNote(
+    decision === "rejected" ? "Decline reward request" : "Approve reward request",
+    decision === "rejected" ? "Add an optional note explaining why this request is declined." : "Add an optional note for this reward request.",
     ""
   );
   if (note === null) return;
-  if (note.trim().length > 2000) {
-    window.alert("The review note must be 2,000 characters or fewer.");
-    return;
-  }
   const admin = auth.currentUser;
   if (!admin || admin.uid !== ADMIN_UID) {
     window.alert("You must be signed in as the admin to review reward requests.");
@@ -572,14 +569,14 @@ function renderTaskEditor(row, task) {
 }
 
 async function reviewTask(task, decision, button) {
-  const feedback = decision === "rejected"
-    ? window.prompt("Share a helpful note so the partner knows what to update:", task.adminFeedback || "")
-    : window.prompt("Optional feedback for this task:", task.adminFeedback || "");
+  const feedback = await requestReviewNote(
+    decision === "rejected" ? "Request task revision" : "Approve task",
+    decision === "rejected"
+      ? "Share a helpful note so your partner knows what to update."
+      : "Add optional feedback for this task.",
+    task.adminFeedback || ""
+  );
   if (feedback === null) return;
-  if (feedback.trim().length > 2000) {
-    window.alert("Feedback must be 2,000 characters or fewer.");
-    return;
-  }
   const admin = auth.currentUser;
   if (!admin || admin.uid !== ADMIN_UID) {
     window.alert("You must be signed in as the admin to review tasks.");
@@ -609,6 +606,75 @@ async function reviewTask(task, decision, button) {
     window.alert(`Could not review this task. ${error.message}`);
     button.disabled = false;
   }
+}
+
+function requestReviewNote(titleText, descriptionText, initialValue) {
+  return new Promise((resolve) => {
+    const dialog = document.createElement("dialog");
+    dialog.className = "review-feedback-dialog";
+    const titleId = `review-feedback-title-${Date.now()}`;
+    const descriptionId = `review-feedback-description-${Date.now()}`;
+    dialog.setAttribute("aria-labelledby", titleId);
+    dialog.setAttribute("aria-describedby", descriptionId);
+
+    const title = document.createElement("h2");
+    title.id = titleId;
+    title.textContent = titleText;
+    const description = document.createElement("p");
+    description.id = descriptionId;
+    description.textContent = descriptionText;
+    const form = document.createElement("form");
+    const label = document.createElement("label");
+    label.textContent = "Feedback (optional)";
+    const input = document.createElement("textarea");
+    input.maxLength = 2000;
+    input.rows = 4;
+    input.value = initialValue;
+    input.setAttribute("aria-label", "Feedback (optional)");
+    const actions = document.createElement("div");
+    actions.className = "review-feedback-actions";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "account-delete-cancel";
+    cancel.textContent = "Cancel";
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.className = "review-feedback-submit";
+    submit.textContent = titleText;
+
+    label.appendChild(input);
+    actions.append(cancel, submit);
+    form.append(label, actions);
+    dialog.append(title, description, form);
+    document.body.appendChild(dialog);
+
+    let result = null;
+    const finish = () => {
+      dialog.remove();
+      resolve(result);
+    };
+    cancel.addEventListener("click", () => dialog.close());
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (input.value.length > 2000) {
+        window.alert("Feedback must be 2,000 characters or fewer.");
+        input.focus();
+        return;
+      }
+      result = input.value.trim();
+      dialog.close();
+    });
+    dialog.addEventListener("close", finish, { once: true });
+
+    try {
+      dialog.showModal();
+      input.focus();
+    } catch (error) {
+      dialog.remove();
+      console.error("Could not open the review feedback dialog:", error);
+      resolve(null);
+    }
+  });
 }
 
 async function deleteTaskAndNotifications(taskId) {
