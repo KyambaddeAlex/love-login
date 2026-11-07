@@ -225,6 +225,42 @@
 
       </div>
     </div>
+
+    <section class="mt-6 space-y-4" aria-labelledby="love-bank-heading">
+      <div>
+        <p class="text-xs font-semibold uppercase tracking-[0.18em] text-pink-400">Your rewards</p>
+        <h2 id="love-bank-heading" class="mt-1 text-2xl font-bold text-white">Your Love Bank</h2>
+        <p class="mt-1 text-sm text-slate-400">See points Alex has approved, track reward decisions, and choose what you would like to request.</p>
+      </div>
+      <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <section class="rounded-2xl border border-pink-500/30 bg-gradient-to-br from-pink-950/60 to-slate-900 p-6 shadow-xl" aria-labelledby="love-bank-balance-heading">
+          <h3 id="love-bank-balance-heading" class="text-sm font-semibold uppercase tracking-wider text-pink-300">Available balance</h3>
+          <p class="mt-3 text-4xl font-bold text-white"><span id="reward-points-balance">—</span><span class="ml-2 text-base font-medium text-pink-200">pts</span></p>
+          <p id="reward-status" role="status" aria-live="polite" class="mt-3 text-sm text-slate-400">Loading your Love Bank...</p>
+          <div class="mt-6 border-t border-slate-700 pt-4">
+            <h4 class="text-xs font-semibold uppercase tracking-wider text-slate-400">Points activity</h4>
+            <div id="points-history" class="mt-3 space-y-3" aria-live="polite">
+              <p class="text-sm text-slate-500">Loading points activity...</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl" aria-labelledby="reward-catalog-heading">
+          <h3 id="reward-catalog-heading" class="text-sm font-semibold uppercase tracking-wider text-pink-400">Choose a reward</h3>
+          <div id="rewards-container" class="mt-4 space-y-4">
+            <p class="text-sm text-slate-500">Loading rewards...</p>
+          </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-800 bg-slate-900 p-6 shadow-xl" aria-labelledby="reward-requests-heading">
+          <h3 id="reward-requests-heading" class="text-sm font-semibold uppercase tracking-wider text-pink-400">Your reward requests</h3>
+          <p class="mt-1 text-xs text-slate-500">Alex's approvals, rejections, and any notes.</p>
+          <div id="reward-requests" class="mt-4 space-y-3" aria-live="polite">
+            <p class="text-sm text-slate-500">Loading your requests...</p>
+          </div>
+        </section>
+      </div>
+    </section>
   </main>
 
   <div id="user-message-notification" role="status" aria-live="polite"
@@ -252,7 +288,7 @@
   </div>
 
   <script type="module">
-    import "./pwa-install.js"; import { auth, db } from "./firebase-config.js";
+    import "./pwa-install.js"; import { auth, db, PUSH_CONFIG } from "./firebase-config.js";
     import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
     import {
       collection, query, where, or, onSnapshot, doc, updateDoc, writeBatch,
@@ -302,10 +338,18 @@
 
     const tasksContainer = document.getElementById("user-tasks-list");
     const emptyTasks = document.getElementById("empty-tasks");
+    const rewardPointsBalance = document.getElementById("reward-points-balance");
+    const rewardStatus = document.getElementById("reward-status");
+    const rewardsContainer = document.getElementById("rewards-container");
+    const rewardRequestsContainer = document.getElementById("reward-requests");
+    const pointsHistoryContainer = document.getElementById("points-history");
 
     let currentUserData = null;
     const adminUid = ADMIN_UID;
     let tasksUnsubscribe = null;
+    let rewardProfileUnsubscribe = null;
+    let rewardRequestsUnsubscribe = null;
+    let pointsLedgerUnsubscribe = null;
     let chatUnsubscribe = null;
     let chatMessagesInitialized = false;
     let userNotificationTimeout = null;
@@ -472,6 +516,7 @@
       });
 
       loadTasks(user.uid);
+      loadRewards(user.uid);
       loadChat(user.uid, adminUid);
     });
 
@@ -718,21 +763,30 @@
     }
 
     function loadRewards(uid) {
+      if (rewardProfileUnsubscribe) rewardProfileUnsubscribe();
+      if (rewardRequestsUnsubscribe) rewardRequestsUnsubscribe();
+      if (pointsLedgerUnsubscribe) pointsLedgerUnsubscribe();
+
       rewardProfileUnsubscribe = onSnapshot(
         doc(db, "users", uid),
         (snap) => {
           if (!snap.exists()) {
             rewardStatus.textContent = "Your profile is unavailable, so rewards cannot be requested.";
             rewardStatus.className = "mt-2 text-xs text-red-400";
+            rewardsContainer.innerHTML = '<p class="text-red-400 text-sm">Your profile is unavailable.</p>';
             return;
           }
           const balance = Number(snap.data().rewardPoints) || 0;
           rewardPointsBalance.textContent = String(balance);
+          rewardStatus.textContent = "Your balance updates automatically as points are approved and rewards are reviewed.";
+          rewardStatus.className = "mt-3 text-sm text-slate-400";
           renderRewardCatalog(balance);
         },
         (error) => {
           rewardPointsBalance.textContent = "—";
           rewardsContainer.innerHTML = '<p class="text-red-400 text-sm">Could not load your Love Bank balance.</p>';
+          rewardStatus.textContent = "Your Love Bank balance could not be loaded.";
+          rewardStatus.className = "mt-3 text-sm text-red-400";
           console.error("Failed to load Love Bank balance:", error);
         }
       );
@@ -741,15 +795,38 @@
         (snap) => {
           rewardRequestsContainer.replaceChildren();
           const requests = snap.docs.map((requestSnap) => ({ id: requestSnap.id, ...requestSnap.data() }));
-          requests.sort((a, b) => (b.requestedAt?.seconds || 0) - (a.requestedAt?.seconds || 0));
+          requests.sort((a, b) => getTimestampMillis(b.requestedAt) - getTimestampMillis(a.requestedAt));
           if (!requests.length) {
             rewardRequestsContainer.innerHTML = '<p class="text-slate-500 text-sm">No requests yet.</p>';
             return;
           }
           requests.forEach((request) => {
-            const item = document.createElement("p");
-            item.className = "text-sm text-slate-300";
-            item.textContent = `${request.rewardTitle || "Reward"} · ${request.cost || 0} pts · ${request.status || "pending"}${request.reviewNote ? ` · ${request.reviewNote}` : ""}`;
+            const item = document.createElement("article");
+            item.className = "rounded-xl border border-slate-800 bg-slate-950/60 p-3";
+            const summary = document.createElement("div");
+            summary.className = "flex flex-wrap items-center justify-between gap-2";
+            const title = document.createElement("p");
+            title.className = "text-sm font-semibold text-slate-200";
+            title.textContent = request.rewardTitle || "Reward";
+            const status = document.createElement("span");
+            const requestStatus = request.status || "pending";
+            status.className = `rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+              requestStatus === "approved" ? "bg-green-950 text-green-300" :
+              requestStatus === "rejected" ? "bg-rose-950 text-rose-300" :
+              "bg-amber-950 text-amber-300"
+            }`;
+            status.textContent = requestStatus;
+            summary.append(title, status);
+            const cost = document.createElement("p");
+            cost.className = "mt-2 text-xs text-slate-400";
+            cost.textContent = `${Number(request.cost) || 0} pts · Requested ${formatDate(request.requestedAt)}`;
+            item.append(summary, cost);
+            if (request.reviewNote) {
+              const note = document.createElement("p");
+              note.className = "mt-2 whitespace-pre-wrap break-words text-sm text-slate-300";
+              note.textContent = `Alex's note: ${request.reviewNote}`;
+              item.appendChild(note);
+            }
             rewardRequestsContainer.appendChild(item);
           });
         },
@@ -763,16 +840,25 @@
         (snap) => {
           pointsHistoryContainer.replaceChildren();
           const entries = snap.docs.map((entrySnap) => entrySnap.data());
-          entries.sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0));
+          entries.sort((a, b) => getTimestampMillis(b.timestamp) - getTimestampMillis(a.timestamp));
           if (!entries.length) {
             pointsHistoryContainer.innerHTML = '<p class="text-slate-500 text-sm">No points activity yet.</p>';
             return;
           }
           entries.slice(0, 20).forEach((entry) => {
             const item = document.createElement("p");
-            item.className = "text-sm text-slate-300";
+            item.className = "border-b border-slate-800 pb-3 last:border-0 last:pb-0";
             const amount = Number(entry.amount) || 0;
-            item.textContent = `${amount > 0 ? "+" : ""}${amount} pts · ${entry.description || "Points update"}`;
+            const change = document.createElement("span");
+            change.className = `font-semibold ${amount > 0 ? "text-green-300" : amount < 0 ? "text-rose-300" : "text-slate-300"}`;
+            change.textContent = `${amount > 0 ? "+" : ""}${amount} pts`;
+            const description = document.createElement("span");
+            description.className = "ml-2 text-sm text-slate-300";
+            description.textContent = entry.description || "Points update";
+            const date = document.createElement("span");
+            date.className = "mt-1 block text-xs text-slate-500";
+            date.textContent = formatDate(entry.timestamp);
+            item.append(change, description, date);
             pointsHistoryContainer.appendChild(item);
           });
         },
@@ -841,6 +927,18 @@
         rewardStatus.className = "mt-2 text-xs text-red-400";
         button.disabled = false;
       }
+    }
+
+    function getTimestampMillis(timestamp) {
+      if (typeof timestamp?.toMillis === "function") return timestamp.toMillis();
+      if (typeof timestamp?.seconds === "number") return timestamp.seconds * 1000;
+      const parsed = Date.parse(timestamp || "");
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+
+    function formatDate(timestamp) {
+      const milliseconds = getTimestampMillis(timestamp);
+      return milliseconds ? new Date(milliseconds).toLocaleDateString() : "date unavailable";
     }
 
     /* ---------- Chat ---------- */

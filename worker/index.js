@@ -109,7 +109,7 @@ export default {
       const senderName = isAdmin ? "Alex" : (message.senderName || "A girlfriend");
       const rawText = typeof message.text === "string" ? message.text : "You have a new message.";
       const body = rawText.length > 180 ? `${rawText.slice(0, 177)}...` : rawText;
-      const targetPage = isAdmin ? "user-dashboard.html" : "index.html";
+      const targetPage = isAdmin ? "user-dashboard.html?v=love-bank-20261107" : "index.html";
       const results = await Promise.all(tokens.map((token) => sendFcm(env, serviceToken, token, {
         title: `New message from ${senderName}`,
         body,
@@ -444,12 +444,6 @@ async function commitFirestoreTransaction(env, accessToken, transaction, writes)
   });
   if (!response.ok) {
     const details = await response.json().catch(() => ({}));
-    console.error("Firestore transaction commit rejected:", JSON.stringify({
-      httpStatus: response.status,
-      firestoreStatus: details.error?.status,
-      firestoreCode: details.error?.code,
-      firestoreMessage: details.error?.message
-    }));
     if (details.error?.status === "ABORTED" || details.error?.status === "FAILED_PRECONDITION") {
       throw httpError(409, "The account changed during this action. Refresh and retry.");
     }
