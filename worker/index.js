@@ -245,7 +245,7 @@ async function reviewTask(env, accessToken, taskId, decision, feedback, adminId)
   const now = new Date().toISOString();
   const writes = [{
     update: {
-      name: firestoreDocumentUrl(env, `tasks/${encodeURIComponent(taskId)}`),
+      name: firestoreDocumentName(env, `tasks/${encodeURIComponent(taskId)}`),
       fields: {
         status: { stringValue: decision },
         adminFeedback: { stringValue: feedback },
@@ -282,7 +282,7 @@ async function reviewTask(env, accessToken, taskId, decision, feedback, adminId)
     }
     writes.push({
       update: {
-        name: firestoreDocumentUrl(env, `users/${encodeURIComponent(task.assignedTo)}`),
+        name: firestoreDocumentName(env, `users/${encodeURIComponent(task.assignedTo)}`),
         fields: { rewardPoints: { integerValue: String(currentBalance + points) } }
       },
       updateMask: { fieldPaths: ["rewardPoints"] },
@@ -291,7 +291,7 @@ async function reviewTask(env, accessToken, taskId, decision, feedback, adminId)
     const ledgerId = `task_${taskId}_award`;
     writes.push({
       update: {
-        name: firestoreDocumentUrl(env, `pointLedger/${encodeURIComponent(ledgerId)}`),
+        name: firestoreDocumentName(env, `pointLedger/${encodeURIComponent(ledgerId)}`),
         fields: {
           userId: { stringValue: task.assignedTo },
           amount: { integerValue: String(points) },
@@ -329,7 +329,7 @@ async function requestReward(env, accessToken, userId, rewardId) {
   const requestId = `reward_${crypto.randomUUID().replace(/-/g, "")}`;
   const now = new Date().toISOString();
   const requestDocument = {
-    name: firestoreDocumentUrl(env, `rewardRequests/${requestId}`),
+    name: firestoreDocumentName(env, `rewardRequests/${requestId}`),
     fields: {
       partnerId: { stringValue: userId },
       partnerName: { stringValue: String(partner.username || "Partner").slice(0, 100) },
@@ -344,7 +344,7 @@ async function requestReward(env, accessToken, userId, rewardId) {
   const writes = [
     {
       update: {
-        name: firestoreDocumentUrl(env, `users/${encodeURIComponent(userId)}`),
+        name: firestoreDocumentName(env, `users/${encodeURIComponent(userId)}`),
         fields: { rewardPoints: { integerValue: String(balance - reward.cost) } }
       },
       updateMask: { fieldPaths: ["rewardPoints"] },
@@ -353,7 +353,7 @@ async function requestReward(env, accessToken, userId, rewardId) {
     { update: requestDocument, currentDocument: { exists: false } },
     {
       update: {
-        name: firestoreDocumentUrl(env, `pointLedger/${encodeURIComponent(ledgerId)}`),
+        name: firestoreDocumentName(env, `pointLedger/${encodeURIComponent(ledgerId)}`),
         fields: {
           userId: { stringValue: userId },
           amount: { integerValue: String(-reward.cost) },
@@ -390,7 +390,7 @@ async function reviewReward(env, accessToken, requestId, decision, note, adminId
   const now = new Date().toISOString();
   const writes = [{
     update: {
-      name: firestoreDocumentUrl(env, `rewardRequests/${encodeURIComponent(requestId)}`),
+      name: firestoreDocumentName(env, `rewardRequests/${encodeURIComponent(requestId)}`),
       fields: {
         status: { stringValue: decision },
         reviewedBy: { stringValue: adminId },
@@ -408,7 +408,7 @@ async function reviewReward(env, accessToken, requestId, decision, note, adminId
     }
     writes.push({
       update: {
-        name: firestoreDocumentUrl(env, `users/${encodeURIComponent(request.partnerId)}`),
+        name: firestoreDocumentName(env, `users/${encodeURIComponent(request.partnerId)}`),
         fields: { rewardPoints: { integerValue: String(balance + cost) } }
       },
       updateMask: { fieldPaths: ["rewardPoints"] },
@@ -416,7 +416,7 @@ async function reviewReward(env, accessToken, requestId, decision, note, adminId
     });
     writes.push({
       update: {
-        name: firestoreDocumentUrl(env, `pointLedger/${encodeURIComponent(requestId)}_refund`),
+        name: firestoreDocumentName(env, `pointLedger/${encodeURIComponent(requestId)}_refund`),
         fields: {
           userId: { stringValue: request.partnerId },
           amount: { integerValue: String(cost) },
@@ -444,6 +444,12 @@ async function commitFirestoreTransaction(env, accessToken, transaction, writes)
   });
   if (!response.ok) {
     const details = await response.json().catch(() => ({}));
+    console.error("Firestore transaction commit rejected:", JSON.stringify({
+      httpStatus: response.status,
+      firestoreStatus: details.error?.status,
+      firestoreCode: details.error?.code,
+      firestoreMessage: details.error?.message
+    }));
     if (details.error?.status === "ABORTED" || details.error?.status === "FAILED_PRECONDITION") {
       throw httpError(409, "The account changed during this action. Refresh and retry.");
     }
@@ -705,6 +711,10 @@ function firestoreDocumentsUrl(env, suffix) {
 
 function firestoreDocumentUrl(env, path) {
   return `${firestoreDocumentsUrl(env, "")}/${path}`;
+}
+
+function firestoreDocumentName(env, path) {
+  return `projects/${encodeURIComponent(env.FIREBASE_PROJECT_ID)}/databases/(default)/documents/${path}`;
 }
 
 async function getDeviceTokens(env, accessToken, userId) {
