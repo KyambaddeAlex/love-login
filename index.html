@@ -6,7 +6,7 @@
   <title>Love Login</title>  <meta name="theme-color" content="#8e2b4b" />  <meta name="apple-mobile-web-app-capable" content="yes" />  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />  <meta name="apple-mobile-web-app-title" content="Love Login" />  <link rel="manifest" href="./manifest.webmanifest" />  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />  <link rel="icon" type="image/svg+xml" href="./icons/love-login.svg" />
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./love-login.css">
+  <link rel="stylesheet" href="./love-login.css?v=7274303">
 </head>
 <body class="app-shell bg-slate-950 text-slate-200 min-h-screen">
 
@@ -290,7 +290,7 @@
   <script type="module">
     import "./pwa-install.js"; import { auth, db } from "./firebase-config.js";
     import { register, login, logout, initAuth, getRole, ADMIN_UID } from "./auth.js";
-    import { renderAdminPanel, destroyAdmin } from "./admin.js";
+    import { renderAdminPanel, destroyAdmin } from "./admin.js?v=7274303";
     import {
       collection, onSnapshot, doc, addDoc, writeBatch,
       serverTimestamp, getDocs, query, where, or
